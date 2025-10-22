@@ -182,7 +182,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 p-4">
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto">
         {/* Header */}
         <Card className="mb-2 border-0 shadow-xl gap-2">
           <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-purple-700 text-white">
