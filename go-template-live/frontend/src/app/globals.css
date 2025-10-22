@@ -120,3 +120,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Monaco Editor Diff Highlighting */
+.diff-removed-line {
+  background-color: rgba(255, 100, 100, 0.15) !important;
+  border-left: 3px solid rgba(255, 100, 100, 0.6);
+}
+
+.diff-removed-inline {
+  background-color: rgba(255, 100, 100, 0.25) !important;
+  border-bottom: 1px dotted rgba(255, 100, 100, 0.8);
+}
+
+.diff-added-line {
+  background-color: rgba(100, 255, 100, 0.15) !important;
+  border-left: 3px solid rgba(100, 255, 100, 0.6);
+}
+
+.diff-added-inline {
+  background-color: rgba(100, 255, 100, 0.25) !important;
+  border-bottom: 1px dotted rgba(100, 255, 100, 0.8);
+}
