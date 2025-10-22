@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import Editor from '@monaco-editor/react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface TemplateDiffViewerProps {
@@ -13,11 +12,11 @@ interface TemplateDiffViewerProps {
   wasmLoaded?: boolean;
 }
 
-interface DiffRange {
-  startLine: number;
-  startColumn: number;
-  endLine: number;
-  endColumn: number;
+declare global {
+  interface Window {
+    require: any;
+    MonacoEnvironment?: any;
+  }
 }
 
 export function TemplateDiffViewer({
@@ -28,238 +27,153 @@ export function TemplateDiffViewer({
   error = null,
   wasmLoaded = false
 }: TemplateDiffViewerProps) {
-  const originalEditorRef = useRef<any>(null);
-  const modifiedEditorRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const diffEditorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
-  const [decorations, setDecorations] = useState<{ original: any[], modified: any[] }>({ original: [], modified: [] });
-  const originalDecorationsRef = useRef<string[]>([]);
-  const modifiedDecorationsRef = useRef<string[]>([]);
+  const originalModelRef = useRef<any>(null);
+  const modifiedModelRef = useRef<any>(null);
+  const [isMonacoLoaded, setIsMonacoLoaded] = useState(false);
 
-  // LCS-based diff algorithm to find and highlight changes
-  const calculateDiffRanges = useCallback((original: string, modified: string) => {
-    const originalRanges: DiffRange[] = [];
-    const modifiedRanges: DiffRange[] = [];
+  // Load Monaco Editor from CDN
+  useEffect(() => {
+    // Check if Monaco is already loaded
+    if (window.require && window.require.defined && window.require.defined('vs/editor/editor.main')) {
+      window.require(['vs/editor/editor.main'], (monaco: any) => {
+        monacoRef.current = monaco;
+        setIsMonacoLoaded(true);
+      });
+      return;
+    }
 
-    // Use LCS (Longest Common Subsequence) for better diff
-    const lcs = computeLCS(original, modified);
+    // Load Monaco Editor loader
+    const loaderScript = document.createElement('script');
+    loaderScript.src = 'https://unpkg.com/monaco-editor@0.45.0/min/vs/loader.js';
+    loaderScript.async = true;
     
-    // Build ranges from LCS
-    let origIndex = 0;
-    let modIndex = 0;
-    let lcsIndex = 0;
-    let diffStartOrig = -1;
-    let diffStartMod = -1;
-
-    while (origIndex < original.length || modIndex < modified.length) {
-      const lcsChar = lcsIndex < lcs.length ? lcs[lcsIndex] : null;
-      const origChar = origIndex < original.length ? original[origIndex] : null;
-      const modChar = modIndex < modified.length ? modified[modIndex] : null;
-
-      if (origChar === lcsChar && modChar === lcsChar) {
-        // Both match LCS, save any pending diff
-        if (diffStartOrig !== -1) {
-          const pos = indexToLineColumn(original, diffStartOrig);
-          const endPos = indexToLineColumn(original, origIndex);
-          originalRanges.push({
-            startLine: pos.line,
-            startColumn: pos.column,
-            endLine: endPos.line,
-            endColumn: endPos.column
-          });
-          diffStartOrig = -1;
+    loaderScript.onload = () => {
+      // Configure Monaco Environment
+      window.MonacoEnvironment = {
+        getWorkerUrl: function (_: any, label: string) {
+          if (label === 'json') {
+            return 'https://unpkg.com/monaco-editor@0.45.0/min/vs/language/json/json.worker.js';
+          }
+          if (label === 'css' || label === 'scss' || label === 'less') {
+            return 'https://unpkg.com/monaco-editor@0.45.0/min/vs/language/css/css.worker.js';
+          }
+          if (label === 'html' || label === 'handlebars' || label === 'razor') {
+            return 'https://unpkg.com/monaco-editor@0.45.0/min/vs/language/html/html.worker.js';
+          }
+          if (label === 'typescript' || label === 'javascript') {
+            return 'https://unpkg.com/monaco-editor@0.45.0/min/vs/language/typescript/ts.worker.js';
+          }
+          return 'https://unpkg.com/monaco-editor@0.45.0/min/vs/base/worker/workerMain.js';
         }
-        if (diffStartMod !== -1) {
-          const pos = indexToLineColumn(modified, diffStartMod);
-          const endPos = indexToLineColumn(modified, modIndex);
-          modifiedRanges.push({
-            startLine: pos.line,
-            startColumn: pos.column,
-            endLine: endPos.line,
-            endColumn: endPos.column
-          });
-          diffStartMod = -1;
-        }
-        origIndex++;
-        modIndex++;
-        lcsIndex++;
-      } else if (origChar !== lcsChar && origChar !== null) {
-        // Character in original that's different
-        if (diffStartOrig === -1) diffStartOrig = origIndex;
-        origIndex++;
-      } else if (modChar !== lcsChar && modChar !== null) {
-        // Character in modified that's different
-        if (diffStartMod === -1) diffStartMod = modIndex;
-        modIndex++;
-      } else {
-        break;
-      }
-    }
+      };
 
-    // Save any final diff
-    if (diffStartOrig !== -1) {
-      const pos = indexToLineColumn(original, diffStartOrig);
-      const endPos = indexToLineColumn(original, origIndex);
-      originalRanges.push({
-        startLine: pos.line,
-        startColumn: pos.column,
-        endLine: endPos.line,
-        endColumn: endPos.column
+      // Configure loader
+      window.require.config({ 
+        paths: { 
+          vs: 'https://unpkg.com/monaco-editor@0.45.0/min/vs' 
+        } 
       });
-    }
-    if (diffStartMod !== -1) {
-      const pos = indexToLineColumn(modified, diffStartMod);
-      const endPos = indexToLineColumn(modified, modIndex);
-      modifiedRanges.push({
-        startLine: pos.line,
-        startColumn: pos.column,
-        endLine: endPos.line,
-        endColumn: endPos.column
+
+      // Load Monaco Editor
+      window.require(['vs/editor/editor.main'], (monaco: any) => {
+        monacoRef.current = monaco;
+        setIsMonacoLoaded(true);
       });
-    }
-
-    return { originalRanges, modifiedRanges };
-  }, []);
-
-  // Compute Longest Common Subsequence
-  const computeLCS = (str1: string, str2: string): string => {
-    const m = str1.length;
-    const n = str2.length;
-    const dp: number[][] = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
-
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        if (str1[i - 1] === str2[j - 1]) {
-          dp[i][j] = dp[i - 1][j - 1] + 1;
-        } else {
-          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-        }
-      }
-    }
-
-    // Backtrack to find LCS
-    let lcs = '';
-    let i = m, j = n;
-    while (i > 0 && j > 0) {
-      if (str1[i - 1] === str2[j - 1]) {
-        lcs = str1[i - 1] + lcs;
-        i--;
-        j--;
-      } else if (dp[i - 1][j] > dp[i][j - 1]) {
-        i--;
-      } else {
-        j--;
-      }
-    }
-
-    return lcs;
-  };
-
-  // Helper function to convert string index to line/column
-  const indexToLineColumn = (text: string, index: number): { line: number; column: number } => {
-    const beforeText = text.substring(0, index);
-    const lines = beforeText.split('\n');
-    return {
-      line: lines.length,
-      column: lines[lines.length - 1].length + 1
     };
-  };
 
-  // Update decorations when content changes
-  useEffect(() => {
-    if (!originalEditorRef.current || !modifiedEditorRef.current || !monacoRef.current) return;
-
-    const { originalRanges, modifiedRanges } = calculateDiffRanges(original, modified);
-    const monaco = monacoRef.current;
-
-    // Create decorations for original editor (red background for removed/changed parts)
-    const originalDecorations = originalRanges.map(range => ({
-      range: new monaco.Range(range.startLine, range.startColumn, range.endLine, range.endColumn),
-      options: {
-        isWholeLine: false,
-        className: 'diff-removed-line',
-        inlineClassName: 'diff-removed-inline',
-        backgroundColor: 'rgba(255, 100, 100, 0.2)',
-        minimap: {
-          color: 'rgba(255, 100, 100, 0.6)',
-          position: monaco.editor.MinimapPosition.Inline
-        }
-      }
-    }));
-
-    // Create decorations for modified editor (green background for added/changed parts)
-    const modifiedDecorations = modifiedRanges.map(range => ({
-      range: new monaco.Range(range.startLine, range.startColumn, range.endLine, range.endColumn),
-      options: {
-        isWholeLine: false,
-        className: 'diff-added-line',
-        inlineClassName: 'diff-added-inline',
-        backgroundColor: 'rgba(100, 255, 100, 0.2)',
-        minimap: {
-          color: 'rgba(100, 255, 100, 0.6)',
-          position: monaco.editor.MinimapPosition.Inline
-        }
-      }
-    }));
-
-    setDecorations({ original: originalDecorations, modified: modifiedDecorations });
-  }, [original, modified, calculateDiffRanges]);
-
-  // Apply decorations
-  useEffect(() => {
-    if (originalEditorRef.current) {
-      const editor = originalEditorRef.current;
-      originalDecorationsRef.current = editor.deltaDecorations(
-        originalDecorationsRef.current,
-        decorations.original
-      );
-    }
-    if (modifiedEditorRef.current) {
-      const editor = modifiedEditorRef.current;
-      modifiedDecorationsRef.current = editor.deltaDecorations(
-        modifiedDecorationsRef.current,
-        decorations.modified
-      );
-    }
-  }, [decorations]);
-
-  const handleOriginalMount = useCallback((editor: any, monaco: any) => {
-    originalEditorRef.current = editor;
-    monacoRef.current = monaco;
-  }, []);
-
-  const handleModifiedMount = useCallback((editor: any, monaco: any) => {
-    modifiedEditorRef.current = editor;
-    if (!monacoRef.current) {
-      monacoRef.current = monaco;
-    }
-  }, []);
-
-  const handleOriginalChange = useCallback((value: string | undefined) => {
-    if (onOriginalChange && value !== undefined && !readOnly) {
-      onOriginalChange(value);
-    }
-  }, [onOriginalChange, readOnly]);
-
-  // Sync scrolling between editors
-  useEffect(() => {
-    if (!originalEditorRef.current || !modifiedEditorRef.current) return;
-
-    const originalEditor = originalEditorRef.current;
-    const modifiedEditor = modifiedEditorRef.current;
-
-    const originalScrollListener = originalEditor.onDidScrollChange((e: any) => {
-      modifiedEditor.setScrollPosition({ scrollTop: e.scrollTop });
-    });
-
-    const modifiedScrollListener = modifiedEditor.onDidScrollChange((e: any) => {
-      originalEditor.setScrollPosition({ scrollTop: e.scrollTop });
-    });
+    document.head.appendChild(loaderScript);
 
     return () => {
-      originalScrollListener.dispose();
-      modifiedScrollListener.dispose();
+      // Cleanup is handled by Monaco itself
     };
   }, []);
+
+  // Initialize DiffEditor
+  useEffect(() => {
+    if (!isMonacoLoaded || !monacoRef.current || !containerRef.current || diffEditorRef.current) {
+      return;
+    }
+
+    const monaco = monacoRef.current;
+
+    // Create models
+    originalModelRef.current = monaco.editor.createModel(original, 'html');
+    modifiedModelRef.current = monaco.editor.createModel(modified, 'html');
+
+    // Create diff editor
+    const diffEditor = monaco.editor.createDiffEditor(containerRef.current, {
+      enableSplitViewResizing: true,
+      renderSideBySide: true,
+      originalEditable: !readOnly,
+      readOnly: readOnly,
+      automaticLayout: true,
+      scrollBeyondLastLine: false,
+      minimap: { enabled: false },
+      fontSize: 14,
+      lineNumbers: 'on',
+      wordWrap: 'on',
+      theme: 'vs-dark',
+      diffWordWrap: 'on',
+      ignoreTrimWhitespace: false,
+      renderIndicators: true,
+      diffAlgorithm: 'advanced',
+    });
+
+    // Set models
+    diffEditor.setModel({
+      original: originalModelRef.current,
+      modified: modifiedModelRef.current,
+    });
+
+    diffEditorRef.current = diffEditor;
+
+    // Listen for changes in the original editor (left side)
+    if (onOriginalChange && !readOnly) {
+      const originalEditor = diffEditor.getOriginalEditor();
+      originalEditor.onDidChangeModelContent(() => {
+        const newValue = originalEditor.getValue();
+        if (onOriginalChange) {
+          onOriginalChange(newValue);
+        }
+      });
+    }
+
+    // Cleanup
+    return () => {
+      if (diffEditorRef.current) {
+        diffEditorRef.current.dispose();
+        diffEditorRef.current = null;
+      }
+      if (originalModelRef.current) {
+        originalModelRef.current.dispose();
+        originalModelRef.current = null;
+      }
+      if (modifiedModelRef.current) {
+        modifiedModelRef.current.dispose();
+        modifiedModelRef.current = null;
+      }
+    };
+  }, [isMonacoLoaded, readOnly, onOriginalChange]);
+
+  // Update content when props change
+  useEffect(() => {
+    if (!originalModelRef.current || !modifiedModelRef.current) return;
+
+    const currentOriginal = originalModelRef.current.getValue();
+    const currentModified = modifiedModelRef.current.getValue();
+
+    // Only update if different to avoid cursor jumps
+    if (currentOriginal !== original) {
+      originalModelRef.current.setValue(original);
+    }
+
+    if (currentModified !== modified) {
+      modifiedModelRef.current.setValue(modified);
+    }
+  }, [original, modified]);
 
   return (
     <Card className="h-full flex flex-col">
@@ -293,77 +207,25 @@ export function TemplateDiffViewer({
 
       <CardContent className="flex-1 p-0">
         <div className="h-full flex flex-col">
-          {/* Labels */}
-          <div className="flex border-b bg-muted">
-            <div className="flex-1 px-4 py-2 text-sm font-medium border-r">
-              Template (Editable)
-            </div>
-            <div className="flex-1 px-4 py-2 text-sm font-medium">
-              Rendered Result
-            </div>
-          </div>
-
-          {/* Side-by-side editors */}
-          <div className="flex-1 min-h-[400px] flex">
-            <div className="flex-1 border-r">
-              <Editor
-                height="100%"
-                value={original}
-                language="html"
-                theme="vs-dark"
-                options={{
-                  readOnly: readOnly,
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  lineNumbers: 'on',
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  wordWrap: 'on',
-                  folding: false,
-                  glyphMargin: false,
-                  lineDecorationsWidth: 10,
-                  lineNumbersMinChars: 3,
-                }}
-                onChange={handleOriginalChange}
-                onMount={handleOriginalMount}
-              />
-            </div>
-            <div className="flex-1">
-              <Editor
-                height="100%"
-                value={modified}
-                language="html"
-                theme="vs-dark"
-                options={{
-                  readOnly: true,
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  lineNumbers: 'on',
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  wordWrap: 'on',
-                  folding: false,
-                  glyphMargin: false,
-                  lineDecorationsWidth: 10,
-                  lineNumbersMinChars: 3,
-                }}
-                onMount={handleModifiedMount}
-              />
-            </div>
-          </div>
+          {/* Monaco DiffEditor Container */}
+          <div 
+            ref={containerRef} 
+            className="flex-1 min-h-[400px]"
+            style={{ height: '100%' }}
+          />
           
           <div className="flex justify-between items-center px-4 py-2 bg-muted text-sm text-muted-foreground border-t">
             <div className="text-xs">
-              {readOnly ? 'Read-only View' : '✏️ Edit template on left to see live rendering on right'}
+              {readOnly ? 'Read-only Diff View' : '✏️ Edit template on left to see live rendering on right'}
             </div>
             <div className="text-xs flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded" style={{ backgroundColor: 'rgba(255, 100, 100, 0.3)' }}></div>
-                <span>Template Syntax</span>
+                <span>Removed/Changed</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded" style={{ backgroundColor: 'rgba(100, 255, 100, 0.3)' }}></div>
-                <span>Rendered Value</span>
+                <span>Added/New</span>
               </div>
             </div>
           </div>

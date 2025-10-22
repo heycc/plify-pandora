@@ -17,7 +17,7 @@ export default function Home() {
   const [wasmLoaded, setWasmLoaded] = useState(false);
 
   // Template states
-  const [templateContent, setTemplateContent] = useState(examples.simple);
+  const [templateContent, setTemplateContent] = useState(examples.basic);
   const [renderedContent, setRenderedContent] = useState('');
 
   // Variable states
@@ -143,8 +143,7 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" size="sm" onClick={() => loadExample('simple')}>Simple</Button>
-              <Button variant="outline" size="sm" onClick={() => loadExample('complex')}>Complex</Button>
+              <Button variant="outline" size="sm" onClick={() => loadExample('basic')}>Basic</Button>
               <Button variant="outline" size="sm" onClick={() => loadExample('functions')}>Functions</Button>
               <Button variant="outline" size="sm" onClick={() => loadExample('control')}>Control Flow</Button>
               <Button variant="outline" size="sm" onClick={() => loadDefaultExample('basic')}>Basic Defaults</Button>

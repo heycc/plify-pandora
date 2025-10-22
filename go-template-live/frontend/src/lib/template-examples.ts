@@ -1,8 +1,7 @@
 // Template examples - stored separately to avoid JavaScript template literal parsing issues
 
 export const examples = {
-  simple: 'Hello {{.Name}}, your email is {{.Email}}!',
-  complex: '<!DOCTYPE html>\n<html>\n<head><title>{{.Title}}</title></head>\n<body>\n    <h1>Welcome {{.User.Name}}</h1>\n    <p>Email: {{.User.Email}}</p>\n    {{if .User.Active}}\n        <p>Status: Active</p>\n    {{end}}\n</body>\n</html>',
+  basic: 'Hello {{.Name}}, your email is {{.Email}}!',
   functions: 'Server: {{getv "server" "localhost"}}:{{getv "port" "8080"}}\nDatabase: {{getv "database" "mysql"}}\nDebug: {{getv "debug" "false"}}',
   control: '{{if .Authenticated}}\n    Welcome {{.User.Name}}!\n    {{range .Items}}\n        - {{.Name}}: {{.Price}}\n    {{end}}\n{{else}}\n    Please login to continue.\n{{end}}'
 };
