@@ -27,88 +27,33 @@ export default function Home() {
   // Error state
   const [error, setError] = useState<string | null>(null);
 
-  // Mock extraction functions (fallback if WASM fails)
-  const extractVariablesMock = useCallback((template: string): VariableInfo[] => {
-    const variables: VariableInfo[] = [];
-
-    // Extract {{.variable}} patterns
-    const fieldMatches = template.matchAll(/\{\{\s*\.([\w.]+)\s*\}\}/g);
-    for (const match of fieldMatches) {
-      variables.push({ name: match[1] });
-    }
-
-    // Extract getv("key", "default") patterns
-    const getvMatches = template.matchAll(/getv\s*\(\s*"([^"]+)"\s*(?:,\s*"([^"]*)")?\s*\)/g);
-    for (const match of getvMatches) {
-      variables.push({
-        name: match[1],
-        defaultValue: match[2] || undefined
-      });
-    }
-
-    // Remove duplicates
-    return variables.filter((v, i, arr) =>
-      arr.findIndex(item => item.name === v.name) === i
-    );
-  }, []);
-
-  // Mock rendering function (fallback if WASM fails)
-  const renderTemplateMock = useCallback((template: string, variables: Record<string, string>): string => {
-    let result = template;
-
-    // Replace {{.variable}} patterns
-    result = result.replace(/\{\{\s*\.([\w.]+)\s*\}\}/g, (match, variableName) => {
-      return variables[variableName] || '';
-    });
-
-    // Replace getv("key", "default") patterns
-    result = result.replace(/getv\s*\(\s*"([^"]+)"\s*(?:,\s*"([^"]*)")?\s*\)/g, (match, key, defaultValue) => {
-      return variables[key] || defaultValue || '';
-    });
-
-    // Simple condition handling for demo
-    result = result.replace(/\{\{\s*if\s+\.([\w.]+)\s*\}\}([\s\S]*?)\{\{\s*end\s*\}\}/g, (match, condition, content) => {
-      return variables[condition] ? content : '';
-    });
-
-    return result;
-  }, []);
-
   // Real WASM extraction function with fallback
   const extractVariables = useCallback(async (template: string): Promise<VariableInfo[]> => {
-    if (!wasmLoaded) {
-      return extractVariablesMock(template);
-    }
-
     try {
       const result = await wasmUtils.extractVariables(template);
       setError(null); // Clear error on success
-      return result.length > 0 ? result : extractVariablesMock(template);
+      return Array.isArray(result) ? result : [];
     } catch (error) {
       const errorMessage = `Failed to extract variables: ${error instanceof Error ? error.message : 'Unknown error'}`;
       setError(errorMessage);
-      console.error('Failed to extract variables with WASM, using mock:', error);
-      return extractVariablesMock(template);
+      console.error('Failed to extract variables with WASM:', error);
+      return [];
     }
-  }, [wasmLoaded, extractVariablesMock]);
+  }, [wasmLoaded]);
 
-  // Real WASM rendering function with fallback
+  // Real WASM rendering function
   const renderTemplate = useCallback(async (template: string, variables: Record<string, string>): Promise<string> => {
-    if (!wasmLoaded) {
-      return renderTemplateMock(template, variables);
-    }
-
     try {
       const result = await wasmUtils.renderTemplate(template, variables);
       setError(null); // Clear error on success
-      return result || renderTemplateMock(template, variables);
+      return typeof result === 'string' ? result : '';
     } catch (error) {
       const errorMessage = `Failed to render template: ${error instanceof Error ? error.message : 'Unknown error'}`;
       setError(errorMessage);
-      console.error('Failed to render template with WASM, using mock:', error);
-      return renderTemplateMock(template, variables);
+      console.error('Failed to render template with WASM:', error);
+      return '';
     }
-  }, [wasmLoaded, renderTemplateMock]);
+  }, [wasmLoaded]);
 
   // Extract variables when template changes
   useEffect(() => {
@@ -130,14 +75,12 @@ export default function Home() {
   // Re-render when template or variables change
   useEffect(() => {
     const render = async () => {
-      if (wasmLoaded) {
-        const rendered = await renderTemplate(templateContent, variableValues);
-        setRenderedContent(rendered);
-      }
+      const rendered = await renderTemplate(templateContent, variableValues);
+      setRenderedContent(rendered);
     };
 
     render();
-  }, [templateContent, variableValues, wasmLoaded, renderTemplate]);
+  }, [templateContent, variableValues, renderTemplate]);
 
   // Initialize WASM
   useEffect(() => {
@@ -150,8 +93,8 @@ export default function Home() {
         const errorMessage = `Failed to initialize WASM: ${error instanceof Error ? error.message : 'Unknown error'}`;
         setError(errorMessage);
         console.error('Failed to initialize WASM:', error);
-        // Fallback to mock mode if WASM fails
-        setWasmLoaded(true);
+        // Do not enable mock mode; keep WASM disabled on failure
+        setWasmLoaded(false);
       }
     };
 
@@ -205,7 +148,6 @@ export default function Home() {
               <Button variant="outline" size="sm" onClick={() => loadExample('functions')}>Functions</Button>
               <Button variant="outline" size="sm" onClick={() => loadExample('control')}>Control Flow</Button>
               <Button variant="outline" size="sm" onClick={() => loadDefaultExample('basic')}>Basic Defaults</Button>
-              <Button variant="outline" size="sm" onClick={() => loadDefaultExample('advanced')}>Advanced Defaults</Button>
               <Button variant="outline" size="sm" onClick={() => loadRenderExample('profile')}>Profile</Button>
               <Button variant="outline" size="sm" onClick={() => loadRenderExample('config')}>Config</Button>
               <Button variant="outline" size="sm" onClick={() => loadRenderExample('email')}>Email</Button>
@@ -216,9 +158,9 @@ export default function Home() {
 
 
         {/* Main Editor Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 h-[calc(100vh-300px)] min-h-[600px]">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 h-[calc(100vh-300px)] min-h-[600px]">
           {/* Left: Template Editor */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <TemplateDiffViewer
               original={templateContent}
               modified={renderedContent}

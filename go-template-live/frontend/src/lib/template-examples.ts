@@ -9,7 +9,6 @@ export const examples = {
 
 export const defaultExamples = {
   basic: 'Welcome {{getv "username" "guest"}}!\nEmail: {{getv "email" "no-reply@example.com"}}\nTheme: {{getv "theme" "light"}}',
-  advanced: '{{if (getv "enabled" true)}}\n    Application: {{getv "app_name" "MyApp"}}\n    Version: {{getv "version" "1.0.0"}}\n    Environment: {{getv "env" "development"}}\n{{else}}\n    Application is disabled\n{{end}}',
   nested: '{{with .Config}}\n    Server: {{getv .server "localhost"}}\n    Port: {{getv .port "8080"}}\n    {{if (getv .ssl false)}}\n        HTTPS Enabled\n    {{end}}\n{{end}}'
 };
 
