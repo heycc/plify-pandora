@@ -95,7 +95,17 @@ class WASMUtils {
       // Handle success case - result is a JSON string
       if (typeof result === 'string') {
         const parsed = JSON.parse(result);
-        return Array.isArray(parsed) ? parsed : [];
+        if (Array.isArray(parsed)) {
+          // Deduplicate variables by name, keeping the first occurrence
+          const seen = new Map<string, VariableInfo>();
+          for (const variable of parsed) {
+            if (!seen.has(variable.name)) {
+              seen.set(variable.name, variable);
+            }
+          }
+          return Array.from(seen.values());
+        }
+        return [];
       }
 
       return [];
