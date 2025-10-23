@@ -131,6 +131,11 @@ export default function Home() {
     setTemplateContent(renderExamples[type]);
   };
 
+  // Helper function to get display name from key
+  const getDisplayName = (key: string): string => {
+    return key.charAt(0).toUpperCase() + key.slice(1);
+  };
+
   const clearTemplate = () => {
     setTemplateContent('');
     setExtractedVariables([]);
@@ -181,13 +186,45 @@ export default function Home() {
           </div>
           <div className="py-0">
             <div className="flex space-x-2 flex-wrap">
-              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadExample('basic')}>Basic</Button>
-              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadExample('functions')}>Functions</Button>
-              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadExample('control')}>Control Flow</Button>
-              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadDefaultExample('basic')}>Basic Defaults</Button>
-              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadRenderExample('profile')}>Profile</Button>
-              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadRenderExample('config')}>Config</Button>
-              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadRenderExample('email')}>Email</Button>
+              {/* Basic Examples */}
+              {Object.keys(examples).map(key => (
+                <Button
+                  key={`basic-${key}`}
+                  className="hover:cursor-pointer"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadExample(key as keyof typeof examples)}
+                >
+                  {getDisplayName(key)}
+                </Button>
+              ))}
+
+              {/* Default Examples */}
+              {Object.keys(defaultExamples).map(key => (
+                <Button
+                  key={`default-${key}`}
+                  className="hover:cursor-pointer"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadDefaultExample(key as keyof typeof defaultExamples)}
+                >
+                  {getDisplayName(key)} Defaults
+                </Button>
+              ))}
+
+              {/* Render Examples */}
+              {Object.keys(renderExamples).map(key => (
+                <Button
+                  key={`render-${key}`}
+                  className="hover:cursor-pointer"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadRenderExample(key as keyof typeof renderExamples)}
+                >
+                  {getDisplayName(key)}
+                </Button>
+              ))}
+
               <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={clearTemplate}>🗑️ Clear All</Button>
               <Button
                 className="hover:cursor-pointer bg-sky-700 hover:bg-sky-800 text-white transition-all duration-200"
