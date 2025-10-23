@@ -17,9 +17,14 @@ type Parser struct {
 
 // NewParser creates a new template parser
 func NewParser(matcher FunctionMatcher) *Parser {
+	return NewParserWithConfig(matcher, DefaultBuildConfig())
+}
+
+// NewParserWithConfig creates a new template parser with specific configuration
+func NewParserWithConfig(matcher FunctionMatcher, config *BuildConfig) *Parser {
 	return &Parser{
 		functionMatcher:  matcher,
-		functionRegistry: DefaultFunctions(),
+		functionRegistry: FunctionsWithConfig(config),
 	}
 }
 
@@ -36,12 +41,12 @@ func (p *Parser) ExtractVariables(fileName, fileContent string) ([]string, error
 	funcs := p.createMinimalFuncMap()
 	tmpl, err := template.New(fileName).Option("missingkey=error").Funcs(funcs).Parse(fileContent)
 	if err != nil {
-		return nil, fmt.Errorf("解析模板文件 %s 存在异常: %v", fileName, err)
+		return nil, fmt.Errorf("error parsing template %s: %v", fileName, err)
 	}
 
 	result, err := p.getFieldFromNode(tmpl.Tree.Root, 0)
 	if err != nil {
-		return nil, fmt.Errorf("解析模板文件 %s 存在异常: %v", fileName, err)
+		return nil, fmt.Errorf("error parsing template %s: %v", fileName, err)
 	}
 
 	return result, nil
@@ -52,12 +57,12 @@ func (p *Parser) ExtractVariablesWithDefaults(fileName, fileContent string) ([]V
 	funcs := p.createMinimalFuncMap()
 	tmpl, err := template.New(fileName).Option("missingkey=error").Funcs(funcs).Parse(fileContent)
 	if err != nil {
-		return nil, fmt.Errorf("解析模板文件 %s 存在异常: %v", fileName, err)
+		return nil, fmt.Errorf("error parsing template %s: %v", fileName, err)
 	}
 
 	result, err := p.getFieldFromNodeWithDefaults(tmpl.Tree.Root, 0)
 	if err != nil {
-		return nil, fmt.Errorf("解析模板文件 %s 存在异常: %v", fileName, err)
+		return nil, fmt.Errorf("error parsing template %s: %v", fileName, err)
 	}
 
 	return result, nil
@@ -67,7 +72,7 @@ func (p *Parser) ExtractVariablesWithDefaults(fileName, fileContent string) ([]V
 func (p *Parser) getFieldFromNode(node parse.Node, depth int) ([]string, error) {
 	depth = depth + 1
 	if depth > maxDepth {
-		return nil, errors.New("模板变量层级太深，检查模板是否正确")
+		return nil, errors.New("template nesting depth exceeded maximum limit, please verify template structure")
 	}
 	var result []string
 	switch node := node.(type) {
@@ -154,7 +159,7 @@ func (p *Parser) getFieldFromNode(node parse.Node, depth int) ([]string, error) 
 func (p *Parser) getFieldFromNodeWithDefaults(node parse.Node, depth int) ([]VariableInfo, error) {
 	depth = depth + 1
 	if depth > maxDepth {
-		return nil, errors.New("模板变量层级太深，检查模板是否正确")
+		return nil, errors.New("template nesting depth exceeded maximum limit, please verify template structure")
 	}
 	var result []VariableInfo
 	switch node := node.(type) {

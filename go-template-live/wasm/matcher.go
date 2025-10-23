@@ -26,6 +26,14 @@ func NewDefaultFunctionMatcher() *DefaultFunctionMatcher {
 	}
 }
 
+// NewOfficialFunctionMatcher creates a function matcher for official mode
+// This matcher doesn't recognize any custom functions
+func NewOfficialFunctionMatcher() *DefaultFunctionMatcher {
+	return &DefaultFunctionMatcher{
+		supportedFunctions: map[string]bool{},
+	}
+}
+
 // MatchCustomFunc checks if a function should be recognized as a parameter-getting method
 func (m *DefaultFunctionMatcher) MatchCustomFunc(funcName string) bool {
 	return m.supportedFunctions[funcName]

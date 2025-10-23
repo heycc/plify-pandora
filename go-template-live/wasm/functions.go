@@ -29,12 +29,14 @@ type VariableExtractorWithDefaults func(args []parse.Node, cycle int) ([]Variabl
 // FunctionRegistry manages all custom template functions
 type FunctionRegistry struct {
 	functions map[string]*FunctionDefinition
+	config    *BuildConfig
 }
 
 // NewFunctionRegistry creates a new function registry
 func NewFunctionRegistry() *FunctionRegistry {
 	return &FunctionRegistry{
 		functions: make(map[string]*FunctionDefinition),
+		config:    DefaultBuildConfig(),
 	}
 }
 
@@ -223,9 +225,17 @@ func extractJsonvVariablesWithDefaults(args []parse.Node, cycle int) ([]Variable
 // DefaultFunctions returns the default function registry with all built-in functions
 // This follows the Confd pattern of providing a standard set of template functions
 func DefaultFunctions() *FunctionRegistry {
-	registry := NewFunctionRegistry()
+	return FunctionsWithConfig(DefaultBuildConfig())
+}
 
-	// Register getv function - similar to Confd's getv
+// FunctionsWithConfig returns a function registry based on build configuration
+func FunctionsWithConfig(config *BuildConfig) *FunctionRegistry {
+	registry := NewFunctionRegistry()
+	registry.config = config
+
+	// Always register minimal function implementations for parsing
+	// This allows templates with custom functions to parse even in official mode
+	// The actual execution will fail if custom functions are used in official mode
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:        "getv",
 		Description: "Get variable value with optional default",
@@ -233,7 +243,6 @@ func DefaultFunctions() *FunctionRegistry {
 		Extractor:   extractGetvVariables,
 	})
 
-	// Register exists function - similar to Confd's exists
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:        "exists",
 		Description: "Check if variable exists",
@@ -241,7 +250,6 @@ func DefaultFunctions() *FunctionRegistry {
 		Extractor:   extractExistsVariables,
 	})
 
-	// Register get function - similar to Confd's get
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:        "get",
 		Description: "Get variable value (returns error if not found)",
@@ -249,7 +257,6 @@ func DefaultFunctions() *FunctionRegistry {
 		Extractor:   extractGetVariables,
 	})
 
-	// Register jsonv function - similar to Confd's JSON capabilities
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:        "jsonv",
 		Description: "Parse JSON variable and return as map",

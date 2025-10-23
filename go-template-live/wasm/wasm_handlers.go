@@ -1,3 +1,6 @@
+//go:build js
+// +build js
+
 package main
 
 import (
@@ -14,8 +17,13 @@ type WASMHandler struct {
 
 // NewWASMHandler creates a new WASM handler
 func NewWASMHandler() *WASMHandler {
+	return NewWASMHandlerWithConfig(DefaultBuildConfig())
+}
+
+// NewWASMHandlerWithConfig creates a new WASM handler with specific configuration
+func NewWASMHandlerWithConfig(config *BuildConfig) *WASMHandler {
 	functionMatcher := &DefaultFunctionMatcher{}
-	parser := NewParser(functionMatcher)
+	parser := NewParserWithConfig(functionMatcher, config)
 	return &WASMHandler{
 		parser: parser,
 	}
@@ -87,7 +95,7 @@ func (h *WASMHandler) RenderTemplate(this js.Value, args []js.Value) interface{}
 	}
 
 	functionHandler := NewFunctionHandler(variables)
-	funcs := functionHandler.CreateFuncMap()
+	funcs := functionHandler.CreateFuncMapWithConfig(h.parser.functionRegistry.config)
 
 	tmpl, err := template.New("template").Funcs(funcs).Parse(templateContent)
 	if err != nil {

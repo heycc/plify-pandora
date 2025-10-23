@@ -26,10 +26,19 @@ func NewFunctionHandler(variables map[string]interface{}) *FunctionHandler {
 
 // CreateFuncMap creates template function map for rendering
 func (h *FunctionHandler) CreateFuncMap() template.FuncMap {
-	return template.FuncMap{
-		"getv":   getvFunc(h.variables),
-		"exists": existsFunc(h.variables),
-		"get":    getFunc(h.variables),
-		"jsonv":  jsonvFunc(h.variables),
+	return h.CreateFuncMapWithConfig(DefaultBuildConfig())
+}
+
+// CreateFuncMapWithConfig creates template function map based on build configuration
+func (h *FunctionHandler) CreateFuncMapWithConfig(config *BuildConfig) template.FuncMap {
+	funcMap := template.FuncMap{}
+
+	if config.IncludeCustomFunctions {
+		funcMap["getv"] = getvFunc(h.variables)
+		funcMap["exists"] = existsFunc(h.variables)
+		funcMap["get"] = getFunc(h.variables)
+		funcMap["jsonv"] = jsonvFunc(h.variables)
 	}
+
+	return funcMap
 }
