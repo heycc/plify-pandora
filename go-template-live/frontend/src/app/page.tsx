@@ -7,6 +7,7 @@ import { TemplateDiffViewer } from '@/components/template-diff-viewer';
 import { VariablePanel } from '@/components/variable-panel';
 import { examples, defaultExamples, renderExamples } from '@/lib/template-examples';
 import { wasmUtils } from '@/lib/wasm-utils';
+import { getTemplateTextFromUrl, copyShareableUrl, hasSharedTemplateInUrl } from '@/lib/url-sharing';
 
 interface VariableInfo {
   name: string;
@@ -26,6 +27,9 @@ export default function Home() {
 
   // Error state
   const [error, setError] = useState<string | null>(null);
+
+  // Share state
+  const [shareStatus, setShareStatus] = useState<'idle' | 'copying' | 'success' | 'error'>('idle');
 
   // Real WASM extraction function with fallback
   const extractVariables = useCallback(async (template: string): Promise<VariableInfo[]> => {
@@ -82,6 +86,16 @@ export default function Home() {
     render();
   }, [templateContent, variableValues, renderTemplate]);
 
+  // Load template from URL if present
+  useEffect(() => {
+    if (hasSharedTemplateInUrl()) {
+      const sharedTemplate = getTemplateTextFromUrl();
+      if (sharedTemplate) {
+        setTemplateContent(sharedTemplate);
+      }
+    }
+  }, []);
+
   // Initialize WASM
   useEffect(() => {
     const initializeWASM = async () => {
@@ -123,6 +137,30 @@ export default function Home() {
     setVariableValues({});
   };
 
+  const handleShareTemplate = async () => {
+    if (!templateContent.trim()) {
+      setError('Cannot share empty template');
+      return;
+    }
+
+    setShareStatus('copying');
+    try {
+      const success = await copyShareableUrl(templateContent);
+      if (success) {
+        setShareStatus('success');
+        // Reset success status after 2 seconds
+        setTimeout(() => setShareStatus('idle'), 2000);
+      } else {
+        setShareStatus('error');
+        setError('Template is too large to share via URL. The maximum allowed is about 2000 characters.');
+      }
+    } catch (error) {
+      setShareStatus('error');
+      setError('Failed to share template');
+      console.error('Failed to share template:', error);
+    }
+  };
+
   return (
     <div className="h-screen mx-auto p-4 bg-gradient-to-br from-sky-200 to-amber-200 flex flex-col overflow-hidden">
       {/* Header */}
@@ -135,8 +173,40 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Example Templates */}
+      <section className="flex-shrink-0">
+        <div className="flex flex-row gap-2 px-6 py-2 bg-white/50 backdrop-blur-sm rounded-lg items-center justify-start">
+          <div className="py-0">
+            <h3 className="text-medium font-semibold">Quick Start Examples</h3>
+          </div>
+          <div className="py-0">
+            <div className="flex space-x-2 flex-wrap">
+              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadExample('basic')}>Basic</Button>
+              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadExample('functions')}>Functions</Button>
+              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadExample('control')}>Control Flow</Button>
+              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadDefaultExample('basic')}>Basic Defaults</Button>
+              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadRenderExample('profile')}>Profile</Button>
+              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadRenderExample('config')}>Config</Button>
+              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadRenderExample('email')}>Email</Button>
+              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={clearTemplate}>🗑️ Clear All</Button>
+              <Button
+                className="hover:cursor-pointer bg-sky-700 hover:bg-sky-800 text-white transition-all duration-200"
+                variant="default"
+                size="sm"
+                onClick={handleShareTemplate}
+                disabled={shareStatus === 'copying' || !templateContent.trim()}
+              >
+                {shareStatus === 'copying' ? '📋 Copying...' :
+                 shareStatus === 'success' ? '✅ Copied!' :
+                 '🔗 Share Your Craft'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Main Editor Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 flex-1 min-h-0 mb-2">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 flex-1 min-h-0 mt-2">
         {/* Left: Template Editor */}
         <div className="lg:col-span-3 min-h-0">
           <TemplateDiffViewer
@@ -158,24 +228,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Example Templates */}
-      <Card className="flex-shrink-0 gap-2 py-4 bg-white/50 backdrop-blur-sm">
-        <CardHeader className="py-0">
-          <CardTitle className="text-lg">Quick Start Examples</CardTitle>
-        </CardHeader>
-        <CardContent className="py-0">
-          <div className="flex space-x-2 flex-wrap">
-            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadExample('basic')}>Basic</Button>
-            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadExample('functions')}>Functions</Button>
-            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadExample('control')}>Control Flow</Button>
-            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadDefaultExample('basic')}>Basic Defaults</Button>
-            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadRenderExample('profile')}>Profile</Button>
-            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadRenderExample('config')}>Config</Button>
-            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadRenderExample('email')}>Email</Button>
-            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={clearTemplate}>🗑️ Clear All</Button>
-          </div>
-        </CardContent>
-      </Card>
+      
     </div>
   );
 }
