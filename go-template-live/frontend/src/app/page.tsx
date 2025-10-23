@@ -7,7 +7,7 @@ import { TemplateDiffViewer } from '@/components/template-diff-viewer';
 import { VariablePanel } from '@/components/variable-panel';
 import { examples, defaultExamples, renderExamples } from '@/lib/template-examples';
 import { wasmUtils } from '@/lib/wasm-utils';
-import { getTemplateTextFromUrl, copyShareableUrl, hasSharedTemplateInUrl } from '@/lib/url-sharing';
+import { getTemplateTextFromUrl, copyShareableUrl, hasSharedTemplateInUrl, generateShareableUrl } from '@/lib/url-sharing';
 
 interface VariableInfo {
   name: string;
@@ -153,6 +153,15 @@ export default function Home() {
       const success = await copyShareableUrl(templateContent);
       if (success) {
         setShareStatus('success');
+
+        // Update current page URL to match the shared template
+        const shareableUrl = generateShareableUrl(templateContent);
+        if (shareableUrl) {
+          // Update URL without reloading the page
+          const url = new URL(shareableUrl);
+          window.history.replaceState({}, '', url.toString());
+        }
+
         // Reset success status after 2 seconds
         setTimeout(() => setShareStatus('idle'), 2000);
       } else {
