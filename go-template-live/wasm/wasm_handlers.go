@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"strings"
-	"text/template"
 	"syscall/js"
+	"text/template"
 )
 
 // WASMHandler handles WASM/JavaScript interface operations

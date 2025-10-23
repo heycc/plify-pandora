@@ -11,7 +11,7 @@ import (
 // Test functions that don't require WASM/JS dependencies
 
 func TestDefaultFunctionMatcher_MatchCustomFunc_Pure(t *testing.T) {
-	matcher := &DefaultFunctionMatcher{}
+	matcher := NewDefaultFunctionMatcher()
 
 	tests := []struct {
 		name     string
@@ -144,8 +144,7 @@ func TestFunctionHandler_getvFunc_Pure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewFunctionHandler(tt.variables)
-			result := handler.getvFunc(tt.key, tt.defaults...)
+			result := getvFunc(tt.variables)(tt.key, tt.defaults...)
 			if result != tt.expected {
 				t.Errorf("getvFunc() = %v, want %v", result, tt.expected)
 			}
@@ -158,8 +157,6 @@ func TestFunctionHandler_existsFunc_Pure(t *testing.T) {
 		"name": "john",
 		"age":  25,
 	}
-
-	handler := NewFunctionHandler(variables)
 
 	tests := []struct {
 		name     string
@@ -190,7 +187,7 @@ func TestFunctionHandler_existsFunc_Pure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := handler.existsFunc(tt.key)
+			result := existsFunc(variables)(tt.key)
 			if result != tt.expected {
 				t.Errorf("existsFunc() = %v, want %v", result, tt.expected)
 			}
@@ -203,8 +200,6 @@ func TestFunctionHandler_getFunc_Pure(t *testing.T) {
 		"name": "john",
 		"age":  25,
 	}
-
-	handler := NewFunctionHandler(variables)
 
 	tests := []struct {
 		name      string
@@ -234,7 +229,7 @@ func TestFunctionHandler_getFunc_Pure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := handler.getFunc(tt.key)
+			got, err := getFunc(variables)(tt.key)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getFunc() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -247,7 +242,7 @@ func TestFunctionHandler_getFunc_Pure(t *testing.T) {
 }
 
 func TestNewParser_Pure(t *testing.T) {
-	matcher := &DefaultFunctionMatcher{}
+	matcher := NewDefaultFunctionMatcher()
 
 	parser := NewParser(matcher)
 
