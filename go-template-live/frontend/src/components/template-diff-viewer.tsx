@@ -108,18 +108,20 @@ export function TemplateDiffViewer({
       enableSplitViewResizing: true,
       renderSideBySide: true,
       originalEditable: !readOnly,
-      readOnly: readOnly,
+      readOnly: true,
       automaticLayout: true,
       scrollBeyondLastLine: false,
       minimap: { enabled: false },
-      fontSize: 14,
+      fontSize: 13,
       lineNumbers: 'on',
+      lineNumbersMinChars: 3,
       wordWrap: 'on',
       theme: 'vs-dark',
       diffWordWrap: 'on',
       ignoreTrimWhitespace: false,
       renderIndicators: true,
       diffAlgorithm: 'advanced',
+      renderSideBySideInlineBreakpoint: 0, // Disable automatic inline mode switching
     });
 
     // Set models
@@ -176,41 +178,20 @@ export function TemplateDiffViewer({
   }, [original, modified]);
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="h-full flex flex-col gap-2 py-4">
+      <CardHeader className="">
         <CardTitle className="text-lg flex items-center gap-2">
           <span className="text-2xl">📝</span>
           Template Diff Viewer
         </CardTitle>
       </CardHeader>
 
-      {/* Status & Error Display */}
-      {(error || !wasmLoaded) && (
-        <div className="px-6 pb-3">
-          <div className={`flex items-center gap-3 p-3 rounded-lg ${error ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-blue-50 border border-blue-200 text-blue-700'}`}>
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
-              error ? 'bg-red-600' : 'bg-blue-600'
-            }`}>
-              {error ? '⚠️' : '⏳'}
-            </div>
-            <div>
-              <div className="font-medium">{error ? 'Error' : 'Status'}</div>
-              <div className="text-sm">
-                {error ? error : (
-                  wasmLoaded ? '✅ WebAssembly module loaded successfully!' : 'Loading WebAssembly module...'
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <CardContent className="flex-1 p-0">
+      <CardContent className="flex-1 px-6">
         <div className="h-full flex flex-col">
           {/* Monaco DiffEditor Container */}
           <div 
             ref={containerRef} 
-            className="flex-1 min-h-[400px]"
+            className="flex-1 min-h-[140px] bg-gray-900 py-2"
             style={{ height: '100%' }}
           />
           
@@ -229,7 +210,26 @@ export function TemplateDiffViewer({
               </div>
             </div>
           </div>
+        {/* Status & Error Display */}
+        {(error || !wasmLoaded) && (
+        <div className="mt-3">
+          <div className={`flex items-center gap-3 p-3 rounded-lg ${error ? 'bg-red-100 border border-red-200 text-red-700' : 'bg-blue-100 border border-blue-200 text-blue-700'}`}>
+            <div className="w-6 h-6 flex items-center justify-center text-sm">
+              
+            </div>
+            <div>
+              <div className="font-medium">{error ? 'Error' : 'Status'}</div>
+              <div className="text-sm">
+                {error ? error : (
+                  wasmLoaded ? '✅ WebAssembly module loaded successfully!' : 'Loading WebAssembly module...'
+                )}
+              </div>
+            </div>
+          </div>
         </div>
+      )}
+        </div>
+      
       </CardContent>
     </Card>
   );

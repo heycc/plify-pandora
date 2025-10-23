@@ -40,10 +40,10 @@ export function VariablePanel({ variables, onVariablesChange }: VariablePanelPro
 
   if (variables.length === 0) {
     return (
-      <Card className="h-full">
+      <Card className="h-full gap-2 py-4">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <span className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm">🎯</span>
+            <span className="text-2xl">🎯</span>
             Variables
           </CardTitle>
         </CardHeader>
@@ -59,16 +59,16 @@ export function VariablePanel({ variables, onVariablesChange }: VariablePanelPro
   }
 
   return (
-    <Card className="h-full flex flex-col gap-2">
-      <CardHeader className="pb-3">
+    <Card className="h-full flex flex-col gap-2 py-4">
+      <CardHeader className="">
         <CardTitle className="text-lg flex items-center gap-2">
-          <span className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm">🎯</span>
+          <span className="text-2xl">🎯</span>
           Variables ({variables.length})
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 p-0">
         <div className="h-full overflow-y-auto">
-          <div className="space-y-4 p-4">
+          <div className="space-y-4 px-4">
             {variables.map((variable, index) => (
               <div key={`${variable.name}-${index}`} className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -86,7 +86,7 @@ export function VariablePanel({ variables, onVariablesChange }: VariablePanelPro
                   value={variableValues[variable.name] || ''}
                   onChange={(e) => handleVariableChange(variable.name, e.target.value)}
                   placeholder={variable.defaultValue ? `Default: ${variable.defaultValue}` : 'Enter value...'}
-                  className="font-mono text-sm"
+                  className="font-mono text-sm py-0"
                 />
               </div>
             ))}

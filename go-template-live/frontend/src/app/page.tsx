@@ -124,75 +124,58 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 p-4">
-      <div className="mx-auto">
-        {/* Header */}
-        <Card className="mb-2 border-0 shadow-xl gap-2">
-          <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-purple-700 text-white">
-            <CardTitle className="text-3xl font-bold mb-2">🚀 Go Template Parser Demo</CardTitle>
-            <CardDescription className="text-blue-100 text-lg">
-              Interactive template editor with real-time variable extraction and rendering
-            </CardDescription>
-          </CardHeader>
-        </Card>
+    <div className="h-screen mx-auto p-4 bg-gradient-to-br from-sky-100 to-amber-100 flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="mb-2 border-0 flex-shrink-0 py-2">
+        <div className="text-center text-blue-700 py-2">
+          <h1 className="text-3xl font-bold mb-2">Golang Template Preview 🚀</h1>
+          <h2 className="text-gray-500 text-lg">
+            Edit Golang template, auto extract variables, render in real-time and view the diff
+          </h2>
+        </div>
+      </div>
 
-        {/* Example Templates */}
-        <Card className="mb-2">
-          <CardHeader>
-            <CardTitle className="text-lg">Quick Start Examples</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" size="sm" onClick={() => loadExample('basic')}>Basic</Button>
-              <Button variant="outline" size="sm" onClick={() => loadExample('functions')}>Functions</Button>
-              <Button variant="outline" size="sm" onClick={() => loadExample('control')}>Control Flow</Button>
-              <Button variant="outline" size="sm" onClick={() => loadDefaultExample('basic')}>Basic Defaults</Button>
-              <Button variant="outline" size="sm" onClick={() => loadRenderExample('profile')}>Profile</Button>
-              <Button variant="outline" size="sm" onClick={() => loadRenderExample('config')}>Config</Button>
-              <Button variant="outline" size="sm" onClick={() => loadRenderExample('email')}>Email</Button>
-              <Button variant="outline" size="sm" onClick={clearTemplate}>🗑️ Clear All</Button>
-            </div>
-          </CardContent>
-        </Card>
-
-
-        {/* Main Editor Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 h-[calc(100vh-300px)] min-h-[600px]">
-          {/* Left: Template Editor */}
-          <div className="lg:col-span-3">
-            <TemplateDiffViewer
-              original={templateContent}
-              modified={renderedContent}
-              onOriginalChange={setTemplateContent}
-              readOnly={!wasmLoaded}
-              error={error}
-              wasmLoaded={wasmLoaded}
-            />
-          </div>
-
-          {/* Right: Variables Panel */}
-          <div className="lg:col-span-1">
-            <VariablePanel
-              variables={extractedVariables}
-              onVariablesChange={handleVariableValuesChange}
-            />
-          </div>
+      {/* Main Editor Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 flex-1 min-h-0 mb-2">
+        {/* Left: Template Editor */}
+        <div className="lg:col-span-3 min-h-0">
+          <TemplateDiffViewer
+            original={templateContent}
+            modified={renderedContent}
+            onOriginalChange={setTemplateContent}
+            readOnly={!wasmLoaded}
+            error={error}
+            wasmLoaded={wasmLoaded}
+          />
         </div>
 
-        {/* Info Footer */}
-        <Card className="mt-6">
-          <CardContent className="pt-6">
-            <div className="text-center text-sm text-muted-foreground">
-              <p>
-                <strong>Supported Syntax:</strong> Go template syntax with variables, functions, and control structures
-              </p>
-              <p className="mt-1">
-                Edit the template on the left, see extracted variables on the right, and watch the real-time rendering in the diff viewer.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Right: Variables Panel */}
+        <div className="lg:col-span-1 min-h-0">
+          <VariablePanel
+            variables={extractedVariables}
+            onVariablesChange={handleVariableValuesChange}
+          />
+        </div>
       </div>
+
+      {/* Example Templates */}
+      <Card className="flex-shrink-0 gap-2 py-4">
+        <CardHeader className="py-0">
+          <CardTitle className="text-lg">Quick Start Examples</CardTitle>
+        </CardHeader>
+        <CardContent className="py-0">
+          <div className="flex space-x-2 flex-wrap">
+            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadExample('basic')}>Basic</Button>
+            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadExample('functions')}>Functions</Button>
+            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadExample('control')}>Control Flow</Button>
+            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadDefaultExample('basic')}>Basic Defaults</Button>
+            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadRenderExample('profile')}>Profile</Button>
+            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadRenderExample('config')}>Config</Button>
+            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={() => loadRenderExample('email')}>Email</Button>
+            <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={clearTemplate}>🗑️ Clear All</Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

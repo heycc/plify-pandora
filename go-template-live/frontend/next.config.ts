@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Acknowledge Turbopack - Monaco works fine without webpack plugin in Turbopack
+  turbopack: {},
 };
 
 export default nextConfig;
