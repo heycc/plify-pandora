@@ -18,7 +18,7 @@ export default function Home() {
   const [wasmLoaded, setWasmLoaded] = useState(false);
 
   // Template states
-  const [templateContent, setTemplateContent] = useState(examples.basic);
+  const [templateContent, setTemplateContent] = useState('');
   const [renderedContent, setRenderedContent] = useState('');
 
   // Variable states
@@ -133,7 +133,7 @@ export default function Home() {
 
   // Helper function to get display name from key
   const getDisplayName = (key: string): string => {
-    return key.charAt(0).toUpperCase() + key.slice(1);
+    return key.replace(/_/g, ' ');
   };
 
   const clearTemplate = () => {
@@ -217,7 +217,7 @@ export default function Home() {
                   size="sm"
                   onClick={() => loadDefaultExample(key as keyof typeof defaultExamples)}
                 >
-                  {getDisplayName(key)} Defaults
+                  {getDisplayName(key)}
                 </Button>
               ))}
 

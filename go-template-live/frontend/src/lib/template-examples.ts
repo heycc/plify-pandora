@@ -1,14 +1,13 @@
 // Template examples - stored separately to avoid JavaScript template literal parsing issues
 
 export const examples = {
-  basic: 'Hello {{.Name}}, your email is {{.Email}}!',
-  functions: 'Server: {{getv "server" "localhost"}}:{{getv "port" "8080"}}\nDatabase: {{getv "database" "mysql"}}\nDebug: {{getv "debug" "false"}}',
-  control: '{{if .Authenticated}}\n    Welcome {{.User.Name}}!\n    {{range .Items}}\n        - {{.Name}}: {{.Price}}\n    {{end}}\n{{else}}\n    Please login to continue.\n{{end}}'
+  Basic: 'Hello {{.Name}}, your email is {{.Email}}!',
+  Control_Flow: '{{if .Authenticated}}\n    Welcome {{.User.Name}}!\n    {{range .Items}}\n        - {{.Name}}: {{.Price}}\n    {{end}}\n{{else}}\n    Please login to continue.\n{{end}}'
 };
 
 export const defaultExamples = {
-  basic: 'Welcome {{getv "username" "guest"}}!\nEmail: {{getv "email" "no-reply@example.com"}}\nTheme: {{getv "theme" "light"}}',
-  nested: '{{with .Config}}\n    Server: {{getv .server "localhost"}}\n    Port: {{getv .port "8080"}}\n    {{if (getv .ssl false)}}\n        HTTPS Enabled\n    {{end}}\n{{end}}'
+  Nested_Fields: '{{with .Config}}\n    Server: {{getv .server "localhost"}}\n    Port: {{getv .port "8080"}}\n    {{if (getv .ssl false)}}\n        HTTPS Enabled\n    {{end}}\n{{end}}',
+  Custom_Functions: 'Server: {{getv "server" "localhost"}}:{{getv "port" "8080"}}\nDatabase: {{getv "database" "mysql"}}\nDebug: {{getv "debug" "false"}}'
 };
 
 export const renderExamples = {
