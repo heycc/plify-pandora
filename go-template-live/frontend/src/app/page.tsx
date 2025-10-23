@@ -124,13 +124,13 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen mx-auto p-4 bg-gradient-to-br from-sky-100 to-amber-100 flex flex-col overflow-hidden">
+    <div className="h-screen mx-auto p-4 bg-gradient-to-br from-sky-200 to-amber-200 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="mb-2 border-0 flex-shrink-0 py-2">
         <div className="text-center text-blue-700 py-2">
-          <h1 className="text-3xl font-bold mb-2">Golang Template Preview 🚀</h1>
+          <h1 className="text-3xl font-bold mb-2">Golang Template Live Preview</h1>
           <h2 className="text-gray-500 text-lg">
-            Edit Golang template, auto extract variables, render in real-time and view the diff
+            Type in Golang template, extract variables, render and view the diff in real-time 🚀
           </h2>
         </div>
       </div>
@@ -159,7 +159,7 @@ export default function Home() {
       </div>
 
       {/* Example Templates */}
-      <Card className="flex-shrink-0 gap-2 py-4">
+      <Card className="flex-shrink-0 gap-2 py-4 bg-white/50 backdrop-blur-sm">
         <CardHeader className="py-0">
           <CardTitle className="text-lg">Quick Start Examples</CardTitle>
         </CardHeader>

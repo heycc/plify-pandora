@@ -178,7 +178,7 @@ export function TemplateDiffViewer({
   }, [original, modified]);
 
   return (
-    <Card className="h-full flex flex-col gap-2 py-4">
+    <Card className="h-full flex flex-col gap-2 py-4 bg-white/70 backdrop-blur-sm">
       <CardHeader className="">
         <CardTitle className="text-lg flex items-center gap-2">
           <span className="text-2xl">📝</span>
