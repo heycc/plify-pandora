@@ -11,34 +11,19 @@ import (
 // Parser handles template parsing and variable extraction
 // This follows the Confd pattern of parsing templates to extract dependencies
 type Parser struct {
-	functionMatcher  FunctionMatcher
-	functionRegistry *FunctionRegistry
+	registry *FunctionRegistry
 }
 
-// NewParser creates a new template parser
-func NewParser(matcher FunctionMatcher) *Parser {
-	return NewParserWithConfig(matcher, DefaultBuildConfig())
-}
-
-// NewParserWithConfig creates a new template parser with specific configuration
-func NewParserWithConfig(matcher FunctionMatcher, config *BuildConfig) *Parser {
+// NewParser creates a new template parser using the global registry
+func NewParser(registry *FunctionRegistry) *Parser {
 	return &Parser{
-		functionMatcher:  matcher,
-		functionRegistry: FunctionsWithConfig(config),
-	}
-}
-
-// NewParserWithRegistry creates a new template parser with custom function registry
-func NewParserWithRegistry(matcher FunctionMatcher, registry *FunctionRegistry) *Parser {
-	return &Parser{
-		functionMatcher:  matcher,
-		functionRegistry: registry,
+		registry: registry,
 	}
 }
 
 // ExtractVariables extracts variable names from template content
 func (p *Parser) ExtractVariables(fileName, fileContent string) ([]string, error) {
-	funcs := p.createMinimalFuncMap()
+	funcs := p.registry.GetMinimalFuncMap()
 	tmpl, err := template.New(fileName).Option("missingkey=error").Funcs(funcs).Parse(fileContent)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template %s: %v", fileName, err)
@@ -54,7 +39,7 @@ func (p *Parser) ExtractVariables(fileName, fileContent string) ([]string, error
 
 // ExtractVariablesWithDefaults extracts variables with default values from template content
 func (p *Parser) ExtractVariablesWithDefaults(fileName, fileContent string) ([]VariableInfo, error) {
-	funcs := p.createMinimalFuncMap()
+	funcs := p.registry.GetMinimalFuncMap()
 	tmpl, err := template.New(fileName).Option("missingkey=error").Funcs(funcs).Parse(fileContent)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template %s: %v", fileName, err)
@@ -293,29 +278,20 @@ func (p *Parser) parseCustomFunc(args []parse.Node, cycle int) ([]string, error)
 	var result []string
 	node := args[0].(*parse.IdentifierNode)
 	funcName := node.Ident
-	match := p.functionMatcher.MatchCustomFunc(funcName)
-	if match {
-		if len(args) > 1 {
-			item := args[1]
-			if item.Type() == parse.NodeString {
-				stringNode := item.(*parse.StringNode)
-				result = append(result, stringNode.Text)
-			} else {
-				sonResult, err := p.getFieldFromNode(item, cycle)
-				if err != nil {
-					return nil, err
-				}
-				result = append(result, sonResult...)
-			}
+	
+	// Check if this is a registered custom function
+	if funcDef, exists := p.registry.GetFunction(funcName); exists && funcDef.Extractor != nil {
+		// Use the function's custom extractor
+		return funcDef.Extractor(args, cycle)
+	}
+	
+	// Not a custom function, process all arguments normally
+	for _, arg := range args {
+		sonResult, err := p.getFieldFromNode(arg, cycle)
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		for _, arg := range args {
-			sonResult, err := p.getFieldFromNode(arg, cycle)
-			if err != nil {
-				return nil, err
-			}
-			result = append(result, sonResult...)
-		}
+		result = append(result, sonResult...)
 	}
 	return result, nil
 }
@@ -325,45 +301,23 @@ func (p *Parser) parseCustomFuncWithDefaults(args []parse.Node, cycle int) ([]Va
 	var result []VariableInfo
 	node := args[0].(*parse.IdentifierNode)
 	funcName := node.Ident
-	match := p.functionMatcher.MatchCustomFunc(funcName)
-	if match {
-		if len(args) > 1 {
-			item := args[1]
-			if item.Type() == parse.NodeString {
-				stringNode := item.(*parse.StringNode)
-				varInfo := VariableInfo{
-					Name: stringNode.Text,
-				}
-				if len(args) > 2 && args[2].Type() == parse.NodeString {
-					defaultValueNode := args[2].(*parse.StringNode)
-					varInfo.DefaultValue = defaultValueNode.Text
-				}
-				result = append(result, varInfo)
-			} else {
-				sonResult, err := p.getFieldFromNode(item, cycle)
-				if err != nil {
-					return nil, err
-				}
-				for _, name := range sonResult {
-					result = append(result, VariableInfo{Name: name})
-				}
-			}
+	
+	// Check if this is a registered custom function
+	if funcDef, exists := p.registry.GetFunction(funcName); exists && funcDef.ExtractorWithDefaults != nil {
+		// Use the function's custom extractor with defaults
+		return funcDef.ExtractorWithDefaults(args, cycle)
+	}
+	
+	// Not a custom function, process all arguments normally
+	for _, arg := range args {
+		sonResult, err := p.getFieldFromNode(arg, cycle)
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		for _, arg := range args {
-			sonResult, err := p.getFieldFromNode(arg, cycle)
-			if err != nil {
-				return nil, err
-			}
-			for _, name := range sonResult {
-				result = append(result, VariableInfo{Name: name})
-			}
+		for _, name := range sonResult {
+			result = append(result, VariableInfo{Name: name})
 		}
 	}
 	return result, nil
 }
 
-// createMinimalFuncMap creates minimal function map for parsing
-func (p *Parser) createMinimalFuncMap() template.FuncMap {
-	return p.functionRegistry.GetMinimalFuncMap()
-}

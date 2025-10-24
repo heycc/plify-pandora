@@ -15,17 +15,10 @@ type WASMHandler struct {
 	parser *Parser
 }
 
-// NewWASMHandler creates a new WASM handler
+// NewWASMHandler creates a new WASM handler using the global registry
 func NewWASMHandler() *WASMHandler {
-	return NewWASMHandlerWithConfig(DefaultBuildConfig())
-}
-
-// NewWASMHandlerWithConfig creates a new WASM handler with specific configuration
-func NewWASMHandlerWithConfig(config *BuildConfig) *WASMHandler {
-	functionMatcher := &DefaultFunctionMatcher{}
-	parser := NewParserWithConfig(functionMatcher, config)
 	return &WASMHandler{
-		parser: parser,
+		parser: NewParser(GetGlobalRegistry()),
 	}
 }
 
@@ -94,8 +87,15 @@ func (h *WASMHandler) RenderTemplate(this js.Value, args []js.Value) interface{}
 		return jsError("Failed to parse variables JSON: " + err.Error())
 	}
 
-	functionHandler := NewFunctionHandler(variables)
-	funcs := functionHandler.CreateFuncMapWithConfig(h.parser.functionRegistry.config)
+	// Start with minimal function map for parsing
+	funcs := h.parser.registry.GetMinimalFuncMap()
+
+	// Add render-specific function implementations
+	// This is provided by either functions_custom.go or functions_official.go
+	renderFuncs := CreateRenderFuncMap(variables)
+	for name, fn := range renderFuncs {
+		funcs[name] = fn
+	}
 
 	tmpl, err := template.New("template").Funcs(funcs).Parse(templateContent)
 	if err != nil {
