@@ -50,11 +50,20 @@ func registerCustomFunctions() {
 		ExtractorWithDefaults: extractKeyArgVariableInfo,
 	})
 
-	// jsonv - Parse JSON variable (no default value support)
+	// json - Parse JSON variable (no default value support)
 	registry.RegisterFunction(&FunctionDefinition{
-		Name:                  "jsonv",
+		Name:                  "json",
 		Description:           "Parse JSON variable and return as map (Confd-style)",
-		Handler:               jsonvMinimalHandler,
+		Handler:               jsonMinimalHandler,
+		Extractor:             extractKeyArgVariable,
+		ExtractorWithDefaults: extractKeyArgVariableInfo,
+	})
+
+	// jsonArray - Parse JSON variable and return as array (no default value support)
+	registry.RegisterFunction(&FunctionDefinition{
+		Name:                  "jsonArray",
+		Description:           "Parse JSON variable and return as array (Confd-style)",
+		Handler:               jsonArrayMinimalHandler,
 		Extractor:             extractKeyArgVariable,
 		ExtractorWithDefaults: extractKeyArgVariableInfo,
 	})
@@ -73,7 +82,11 @@ func getMinimalHandler(key string) (interface{}, error) {
 	return nil, nil
 }
 
-func jsonvMinimalHandler(key string) (map[string]interface{}, error) {
+func jsonMinimalHandler(key string) (map[string]interface{}, error) {
+	return nil, nil
+}
+
+func jsonArrayMinimalHandler(key string) ([]interface{}, error) {
 	return nil, nil
 }
 
@@ -108,7 +121,7 @@ func getRenderHandler(variables map[string]interface{}) func(key string) (interf
 	}
 }
 
-func jsonvRenderHandler(variables map[string]interface{}) func(key string) (map[string]interface{}, error) {
+func jsonRenderHandler(variables map[string]interface{}) func(key string) (map[string]interface{}, error) {
 	return func(key string) (map[string]interface{}, error) {
 		if val, exists := variables[key]; exists {
 			if strVal, ok := val.(string); ok {
@@ -121,8 +134,21 @@ func jsonvRenderHandler(variables map[string]interface{}) func(key string) (map[
 	}
 }
 
+func jsonArrayRenderHandler(variables map[string]interface{}) func(key string) ([]interface{}, error) {
+	return func(key string) ([]interface{}, error) {
+		if val, exists := variables[key]; exists {
+			if strVal, ok := val.(string); ok {
+				var result []interface{}
+				err := json.Unmarshal([]byte(strVal), &result)
+				return result, err
+			}
+		}
+		return nil, fmt.Errorf("key %s not found", key)
+	}
+}
+
 // Variable extractors
-// Note: Only getv supports default values. Other functions (exists, get, jsonv)
+// Note: Only getv supports default values. Other functions (exists, get, json)
 // just extract the key name without defaults.
 
 // extractKeyArgVariable extracts a single key argument (used by all custom functions)
@@ -148,9 +174,10 @@ func extractGetvVariablesWithDefaults(args []parse.Node, cycle int) ([]VariableI
 // CreateRenderFuncMap creates function map with actual variable values for rendering
 func CreateRenderFuncMap(variables map[string]interface{}) map[string]interface{} {
 	return map[string]interface{}{
-		"getv":   getvRenderHandler(variables),
-		"exists": existsRenderHandler(variables),
-		"get":    getRenderHandler(variables),
-		"jsonv":  jsonvRenderHandler(variables),
+		"getv":      getvRenderHandler(variables),
+		"exists":    existsRenderHandler(variables),
+		"get":       getRenderHandler(variables),
+		"json":      jsonRenderHandler(variables),
+		"jsonArray": jsonArrayRenderHandler(variables),
 	}
 }

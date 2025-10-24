@@ -104,6 +104,74 @@ func TestEndToEnd_ExtractAndRender(t *testing.T) {
 			},
 			expectedOutput: "User: Bob, Active: true, Role: user",
 		},
+		{
+			name:     "json function - parse and access fields",
+			template: `{{$user := json "user_data"}}Name: {{$user.name}}, Age: {{$user.age}}`,
+			expectedVars: []VariableInfo{
+				{Name: "user_data"},
+			},
+			providedValues: map[string]interface{}{
+				"user_data": `{"name":"Alice","age":30}`,
+			},
+			expectedOutput: "Name: Alice, Age: 30",
+		},
+		{
+			name:     "jsonArray function - iterate over array",
+			template: `{{range jsonArray "fruits"}}{{.}}, {{end}}`,
+			expectedVars: []VariableInfo{
+				{Name: "fruits"},
+			},
+			providedValues: map[string]interface{}{
+				"fruits": `["apple","banana","cherry"]`,
+			},
+			expectedOutput: "apple, banana, cherry, ",
+		},
+		{
+			name:     "jsonArray function - iterate over number array",
+			template: `{{range jsonArray "numbers"}}{{.}} {{end}}`,
+			expectedVars: []VariableInfo{
+				{Name: "numbers"},
+			},
+			providedValues: map[string]interface{}{
+				"numbers": `[1,2,3,4,5]`,
+			},
+			expectedOutput: "1 2 3 4 5 ",
+		},
+		{
+			name:     "jsonArray function - count items",
+			template: `Count: {{len (jsonArray "items")}}`,
+			expectedVars: []VariableInfo{
+				{Name: "items"},
+			},
+			providedValues: map[string]interface{}{
+				"items": `["a","b","c"]`,
+			},
+			expectedOutput: "Count: 3",
+		},
+		{
+			name:     "jsonArray function - index access",
+			template: `{{$arr := jsonArray "colors"}}First: {{index $arr 0}}, Second: {{index $arr 1}}`,
+			expectedVars: []VariableInfo{
+				{Name: "colors"},
+			},
+			providedValues: map[string]interface{}{
+				"colors": `["red","green","blue"]`,
+			},
+			expectedOutput: "First: red, Second: green",
+		},
+		{
+			name:     "combined json and jsonArray",
+			template: `{{$config := json "config"}}App: {{$config.name}}, {{range jsonArray "tags"}}#{{.}} {{end}}`,
+			expectedVars: []VariableInfo{
+				{Name: "config"},
+				{Name: "tags"},
+			},
+			providedValues: map[string]interface{}{
+				"config": `{"name":"MyApp","version":"1.0"}`,
+				"tags":   `["production","stable","v1"]`,
+			},
+			expectedOutput: "App: MyApp, #production #stable #v1 ",
+		},
 	}
 
 	for _, tt := range tests {

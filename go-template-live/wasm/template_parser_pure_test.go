@@ -228,6 +228,136 @@ func TestGetRenderHandler_Pure(t *testing.T) {
 	}
 }
 
+func TestJsonRenderHandler_Pure(t *testing.T) {
+	variables := map[string]interface{}{
+		"validJson":   `{"name":"john","age":25}`,
+		"invalidJson": `{invalid}`,
+		"notString":   123,
+	}
+
+	tests := []struct {
+		name      string
+		key       string
+		wantValue map[string]interface{}
+		wantErr   bool
+	}{
+		{
+			name: "valid json",
+			key:  "validJson",
+			wantValue: map[string]interface{}{
+				"name": "john",
+				"age":  float64(25),
+			},
+			wantErr: false,
+		},
+		{
+			name:      "invalid json",
+			key:       "invalidJson",
+			wantValue: nil,
+			wantErr:   true,
+		},
+		{
+			name:      "non-existing key",
+			key:       "missing",
+			wantValue: nil,
+			wantErr:   true,
+		},
+		{
+			name:      "non-string value",
+			key:       "notString",
+			wantValue: nil,
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := jsonRenderHandler(variables)(tt.key)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("jsonRenderHandler() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.wantValue) {
+				t.Errorf("jsonRenderHandler() = %v, want %v", got, tt.wantValue)
+			}
+		})
+	}
+}
+
+func TestJsonArrayRenderHandler_Pure(t *testing.T) {
+	variables := map[string]interface{}{
+		"validArray":   `["apple","banana","cherry"]`,
+		"validNumbers": `[1,2,3,4,5]`,
+		"validMixed":   `[1,"two",3.5,true,null]`,
+		"invalidJson":  `[invalid]`,
+		"notString":    123,
+		"jsonObject":   `{"name":"john"}`,
+	}
+
+	tests := []struct {
+		name      string
+		key       string
+		wantValue []interface{}
+		wantErr   bool
+	}{
+		{
+			name:      "valid string array",
+			key:       "validArray",
+			wantValue: []interface{}{"apple", "banana", "cherry"},
+			wantErr:   false,
+		},
+		{
+			name:      "valid number array",
+			key:       "validNumbers",
+			wantValue: []interface{}{float64(1), float64(2), float64(3), float64(4), float64(5)},
+			wantErr:   false,
+		},
+		{
+			name:      "valid mixed array",
+			key:       "validMixed",
+			wantValue: []interface{}{float64(1), "two", float64(3.5), true, nil},
+			wantErr:   false,
+		},
+		{
+			name:      "invalid json",
+			key:       "invalidJson",
+			wantValue: nil,
+			wantErr:   true,
+		},
+		{
+			name:      "non-existing key",
+			key:       "missing",
+			wantValue: nil,
+			wantErr:   true,
+		},
+		{
+			name:      "non-string value",
+			key:       "notString",
+			wantValue: nil,
+			wantErr:   true,
+		},
+		{
+			name:      "json object instead of array",
+			key:       "jsonObject",
+			wantValue: nil,
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := jsonArrayRenderHandler(variables)(tt.key)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("jsonArrayRenderHandler() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.wantValue) {
+				t.Errorf("jsonArrayRenderHandler() = %v, want %v", got, tt.wantValue)
+			}
+		})
+	}
+}
+
 func TestNewParser_Pure(t *testing.T) {
 	registry := NewFunctionRegistry()
 

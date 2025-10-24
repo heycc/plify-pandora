@@ -3,7 +3,7 @@
 This project provides a WebAssembly (WASM) module for parsing Go templates and extracting variables. It supports two build configurations:
 
 - **Official Functions Only**: Standard Go template functions
-- **Custom Functions**: Official functions plus Confd-like custom functions (getv, exists, get, jsonv)
+- **Custom Functions**: Official functions plus Confd-like custom functions (getv, exists, get, json)
 
 ## 🚀 Quick Start
 
@@ -44,7 +44,7 @@ The project uses a **plugin-style architecture** with **build tags** for clean s
 #### Custom Functions (`functions_custom.go`)
 - **Build Tag**: `!official` (included when NOT building with "official" tag)
 - Registers custom functions via `init()` function
-- Implements: `getv`, `exists`, `get`, `jsonv`
+- Implements: `getv`, `exists`, `get`, `json`
 - Inspired by [Confd](https://github.com/kelseyhightower/confd)
 
 #### Official Build (`functions_official.go`)
@@ -68,7 +68,7 @@ The project uses a **plugin-style architecture** with **build tags** for clean s
 | `getv` | Get variable with optional default | `{{getv "username" "guest"}}` |
 | `exists` | Check if variable exists | `{{exists "feature_flag"}}` |
 | `get` | Get variable (errors if not found) | `{{get "required_field"}}` |
-| `jsonv` | Parse JSON variable | `{{jsonv "config_json"}}` |
+| `json` | Parse JSON variable | `{{json "config_json"}}` |
 
 ## 📦 Build Process
 
@@ -264,7 +264,7 @@ func CreateRenderFuncMap(variables map[string]interface{}) map[string]interface{
         "getv":    getvRenderHandler(variables),
         "exists":  existsRenderHandler(variables),
         "get":     getRenderHandler(variables),
-        "jsonv":   jsonvRenderHandler(variables),
+        "json":   jsonRenderHandler(variables),
         "newfunc": newfuncRenderHandler(variables),  // Add your function
     }
 }

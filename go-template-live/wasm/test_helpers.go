@@ -43,9 +43,17 @@ func (h *TestHelper) NewParserWithCustomFunctions() *Parser {
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
-		Name:                  "jsonv",
+		Name:                  "json",
 		Description:           "Parse JSON variable and return as map (Confd-style)",
 		Handler:               func(key string) (map[string]interface{}, error) { return nil, nil },
+		Extractor:             extractKeyArgVariable,
+		ExtractorWithDefaults: extractKeyArgVariableInfo,
+	})
+
+	registry.RegisterFunction(&FunctionDefinition{
+		Name:                  "jsonArray",
+		Description:           "Parse JSON variable and return as array (Confd-style)",
+		Handler:               func(key string) ([]interface{}, error) { return nil, nil },
 		Extractor:             extractKeyArgVariable,
 		ExtractorWithDefaults: extractKeyArgVariableInfo,
 	})
