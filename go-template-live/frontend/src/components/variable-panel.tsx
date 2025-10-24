@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,28 +12,16 @@ interface VariableInfo {
 
 interface VariablePanelProps {
   variables: VariableInfo[];
+  values: Record<string, string>;
   onVariablesChange: (variables: Record<string, string>) => void;
 }
 
-export function VariablePanel({ variables, onVariablesChange }: VariablePanelProps) {
-  const [variableValues, setVariableValues] = useState<Record<string, string>>({});
-
-  // Initialize variable values with defaults
-  useEffect(() => {
-    const initialValues: Record<string, string> = {};
-    variables.forEach(variable => {
-      initialValues[variable.name] = variable.defaultValue || '';
-    });
-    setVariableValues(initialValues);
-    onVariablesChange(initialValues);
-  }, [variables, onVariablesChange]);
-
+export function VariablePanel({ variables, values, onVariablesChange }: VariablePanelProps) {
   const handleVariableChange = (variableName: string, value: string) => {
     const newValues = {
-      ...variableValues,
+      ...values,
       [variableName]: value
     };
-    setVariableValues(newValues);
     onVariablesChange(newValues);
   };
 
@@ -83,7 +70,7 @@ export function VariablePanel({ variables, onVariablesChange }: VariablePanelPro
                 </div>
                 <Input
                   id={`variable-${variable.name}-${index}`}
-                  value={variableValues[variable.name] || ''}
+                  value={values[variable.name] || ''}
                   onChange={(e) => handleVariableChange(variable.name, e.target.value)}
                   placeholder={variable.defaultValue ? `Default: ${variable.defaultValue}` : 'Enter value...'}
                   className="font-mono text-sm py-0"

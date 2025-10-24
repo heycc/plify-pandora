@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { TemplateDiffViewer } from '@/components/template-diff-viewer';
 import { VariablePanel } from '@/components/variable-panel';
 import { examples } from '@/lib/template-examples';
 import { wasmUtils } from '@/lib/wasm-utils';
-import { getTemplateTextFromUrl, copyShareableUrl, hasSharedTemplateInUrl, generateShareableUrl } from '@/lib/url-sharing';
+import { getTemplateDataFromUrl, copyShareableUrl, hasSharedTemplateInUrl, generateShareableUrl } from '@/lib/url-sharing';
 
 interface VariableInfo {
   name: string;
@@ -29,6 +29,17 @@ export default function Home() {
 
   // Share state
   const [shareStatus, setShareStatus] = useState<'idle' | 'copying' | 'success' | 'error'>('idle');
+
+  // Track if we're loading from URL to avoid conflicts
+  const [isLoadingFromUrl, setIsLoadingFromUrl] = useState(true);
+
+  // Use ref to track current variable values without causing re-renders
+  const variableValuesRef = useRef<Record<string, string>>({});
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    variableValuesRef.current = variableValues;
+  }, [variableValues]);
 
   // Real WASM extraction function with fallback
   const extractVariables = useCallback(async (template: string): Promise<VariableInfo[]> => {
@@ -58,22 +69,40 @@ export default function Home() {
     }
   }, [wasmLoaded]);
 
-  // Extract variables when template changes
+  // Extract variables when template changes (but not during URL loading)
   useEffect(() => {
+    // Skip if we're still loading from URL
+    if (isLoadingFromUrl) {
+      return;
+    }
+
     const extractVars = async () => {
       const variables = await extractVariables(templateContent);
-      setExtractedVariables(variables);
+      
+      // Only update if extraction was successful and returned variables
+      if (variables && Array.isArray(variables)) {
+        setExtractedVariables(variables);
 
-      // Initialize variable values with defaults
-      const initialValues: Record<string, string> = {};
-      variables.forEach(variable => {
-        initialValues[variable.name] = variable.defaultValue || '';
-      });
-      setVariableValues(initialValues);
+        // Smart merge: preserve existing user input, use defaults for new variables
+        const currentValues = variableValuesRef.current;
+        const newValues: Record<string, string> = {};
+        
+        variables.forEach(variable => {
+          // If user has already input a value for this variable, keep it
+          if (currentValues[variable.name] !== undefined) {
+            newValues[variable.name] = currentValues[variable.name];
+          } else {
+            // New variable: use default or empty string
+            newValues[variable.name] = variable.defaultValue || '';
+          }
+        });
+        setVariableValues(newValues);
+      }
+      // If extraction fails, keep existing variables and values (don't clear them)
     };
 
     extractVars();
-  }, [templateContent, extractVariables]);
+  }, [templateContent, extractVariables, isLoadingFromUrl]);
 
   // Re-render when template or variables change
   useEffect(() => {
@@ -85,15 +114,35 @@ export default function Home() {
     render();
   }, [templateContent, variableValues, renderTemplate]);
 
-  // Load template from URL if present
+  // Load template and variables from URL if present (runs once on mount)
   useEffect(() => {
-    if (hasSharedTemplateInUrl()) {
-      const sharedTemplate = getTemplateTextFromUrl();
-      if (sharedTemplate) {
-        setTemplateContent(sharedTemplate);
+    const loadFromUrl = async () => {
+      if (hasSharedTemplateInUrl()) {
+        const sharedData = getTemplateDataFromUrl();
+        if (sharedData) {
+          // Set template first
+          setTemplateContent(sharedData.template);
+          
+          // Extract variables from the template
+          const variables = await extractVariables(sharedData.template);
+          setExtractedVariables(variables);
+          
+          // Prepare variable values: use URL values if present, otherwise use defaults
+          const initialValues: Record<string, string> = {};
+          variables.forEach(variable => {
+            initialValues[variable.name] = 
+              sharedData.variables?.[variable.name] ?? variable.defaultValue ?? '';
+          });
+          setVariableValues(initialValues);
+        }
       }
-    }
-  }, []);
+      // Mark URL loading as complete after a brief delay to ensure state is set
+      setTimeout(() => setIsLoadingFromUrl(false), 100);
+    };
+    
+    loadFromUrl();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   // Handle Cmd+S / Ctrl+S to update URL
   useEffect(() => {
@@ -107,7 +156,7 @@ export default function Home() {
         }
 
         try {
-          const shareableUrl = generateShareableUrl(templateContent);
+          const shareableUrl = generateShareableUrl(templateContent, variableValues);
           if (shareableUrl) {
             // Update URL without reloading the page
             const url = new URL(shareableUrl);
@@ -126,7 +175,7 @@ export default function Home() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [templateContent]);
+  }, [templateContent, variableValues]);
 
   // Initialize WASM
   useEffect(() => {
@@ -174,12 +223,12 @@ export default function Home() {
 
     setShareStatus('copying');
     try {
-      const success = await copyShareableUrl(templateContent);
+      const success = await copyShareableUrl(templateContent, variableValues);
       if (success) {
         setShareStatus('success');
 
         // Update current page URL to match the shared template
-        const shareableUrl = generateShareableUrl(templateContent);
+        const shareableUrl = generateShareableUrl(templateContent, variableValues);
         if (shareableUrl) {
           // Update URL without reloading the page
           const url = new URL(shareableUrl);
@@ -258,6 +307,7 @@ export default function Home() {
         <div className="lg:col-span-1 min-h-0">
           <VariablePanel
             variables={extractedVariables}
+            values={variableValues}
             onVariablesChange={handleVariableValuesChange}
           />
         </div>
