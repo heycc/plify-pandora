@@ -18,32 +18,47 @@ This project provides a WebAssembly (WASM) module for parsing Go templates and e
 # - custom.wasm (official functions + custom functions)
 ```
 
-## Architecture Overview
+## 🏗️ Architecture Overview
+
+The project uses a **plugin-style architecture** with **build tags** for clean separation between official and custom builds.
+
+### Key Design Principles
+
+1. **Build Tags for Compile-Time Selection**: Uses Go build tags to include/exclude custom functions at compile time
+2. **Single Source of Truth**: `FunctionRegistry` is the only place that tracks available functions
+3. **Easy Extensibility**: Add new functions by creating new files with appropriate build tags
+4. **Code Reuse**: Core parsing logic is shared; only function implementations differ
 
 ### Core Components
 
-#### Build Configuration (`build_config.go`)
-- `BuildConfig` struct controls which functions are included
-- `DefaultBuildConfig()` - Includes custom functions
-- `OfficialBuildConfig()` - Official functions only
+#### Type Definitions (`types.go`)
+- `VariableInfo`: Stores variable name and optional default value
+- `FunctionDefinition`: Defines function name, handler, and variable extractors
+- `FunctionRegistry`: Central registry for all template functions
 
-#### Function Registry (`functions.go`)
-- `FunctionRegistry` manages custom template functions
-- `FunctionDefinition` defines function name, handler, and variable extractor
-- Always registers minimal implementations for parsing, execution behavior differs by config
+#### Function Base (`function_base.go`)
+- Helper functions for extracting variables from function arguments
+- Global registry instance (`globalRegistry`)
+- No build tags - included in both builds
 
-#### Function Matcher (`matcher.go`)
-- `FunctionMatcher` interface for matching custom functions
-- `DefaultFunctionMatcher` - Recognizes custom functions
-- `OfficialFunctionMatcher` - Only recognizes official functions
+#### Custom Functions (`functions_custom.go`)
+- **Build Tag**: `!official` (included when NOT building with "official" tag)
+- Registers custom functions via `init()` function
+- Implements: `getv`, `exists`, `get`, `jsonv`
+- Inspired by [Confd](https://github.com/kelseyhightower/confd)
 
-#### Template Parser (`template_parser.go`, `parser.go`)
-- `Parser` extracts variables from templates
-- Supports both standard template fields and custom function parameters
-- Configurable via `BuildConfig` and `FunctionMatcher`
+#### Official Build (`functions_official.go`)
+- **Build Tag**: `official` (included only when building with "official" tag)
+- Provides empty `CreateRenderFuncMap()` for official builds
+- No custom functions registered
 
-#### WASM Interface (`wasm_handlers.go`)
-- `WASMHandler` provides JavaScript interface
+#### Parser (`parser.go`)
+- Extracts variables from template AST
+- Uses `FunctionRegistry` to determine which functions to recognize
+- Supports both simple extraction and extraction with default values
+
+#### WASM Handler (`wasm_handler.go`)
+- JavaScript interface for WASM module
 - Functions exposed: `extractTemplateVariables`, `extractTemplateVariablesSimple`, `renderTemplateWithValues`
 
 ### Custom Functions
@@ -55,7 +70,7 @@ This project provides a WebAssembly (WASM) module for parsing Go templates and e
 | `get` | Get variable (errors if not found) | `{{get "required_field"}}` |
 | `jsonv` | Parse JSON variable | `{{jsonv "config_json"}}` |
 
-## Build Process
+## 📦 Build Process
 
 ### Prerequisites
 - Go 1.16+
@@ -77,18 +92,23 @@ This creates two WASM files:
 
 ```bash
 # Build official version (no custom functions)
-GOOS=js GOARCH=wasm go build -o official.wasm .
+GOOS=js GOARCH=wasm go build -tags official -o official.wasm .
 
 # Build custom version (with custom functions)
-GOOS=js GOARCH=wasm go build -tags custom -o custom.wasm .
+GOOS=js GOARCH=wasm go build -o custom.wasm .
 ```
 
-### Build Tags
+### Build Tags Explained
 
-- `js` - Required for WASM builds
-- `custom` - Includes custom functions (used in custom.wasm)
+- **`official`**: When present, excludes custom functions
+  - Includes: `functions_official.go`
+  - Excludes: `functions_custom.go`
+  
+- **No tags (default)**: Includes custom functions
+  - Includes: `functions_custom.go`
+  - Excludes: `functions_official.go`
 
-## Testing
+## 🧪 Testing
 
 ### Running Tests
 
@@ -130,10 +150,10 @@ Tests verify:
 - Variable extraction from standard template fields
 - Variable extraction from custom function parameters
 - Both build configurations work correctly
-- Function matching logic
+- Function registry operations
 - Template rendering with variables
 
-## Usage
+## 📖 Usage
 
 ### JavaScript Interface
 
@@ -168,52 +188,105 @@ const result = renderTemplateWithValues(template, JSON.stringify(values));
 
 ```
 wasm/
-├── build_config.go      # Build configuration
-├── functions.go         # Function registry and definitions
-├── matcher.go           # Function matching logic
-├── parser.go            # Template parser
-├── template_parser.go   # Template parsing utilities
-├── wasm_handlers.go     # WASM/JavaScript interface
-├── main.go              # WASM entry point
-├── build.sh             # Build script
-├── README.md            # This file
-└── *_test.go           # Test files
+├── types.go                          # Core types and registry
+├── function_base.go                  # Base function utilities
+├── functions_custom.go               # Custom functions (build tag: !official)
+├── functions_official.go             # Official build stub (build tag: official)
+├── parser.go                     # Template parser
+├── wasm_handler.go               # WASM/JavaScript interface
+├── main.go                           # WASM entry point
+├── build.sh                      # Build script
+├── test_helpers.go               # Test utilities
+├── template_parser_pure_test.go  # Unit tests
+├── template_parser_test.go           # Integration tests
+└── README.md                     # This file
 ```
 
-## Extending with New Functions
+## 🔧 Extending with New Functions
 
-To add new custom functions:
+The new architecture makes it easy to add custom functions:
 
-1. **Add to Function Registry** (`functions.go`):
-   ```go
-   registry.RegisterFunction(&FunctionDefinition{
-       Name:        "newfunc",
-       Description: "New function description",
-       Handler:     newFuncHandler,
-       Extractor:   extractNewFuncVariables,
-   })
-   ```
+### 1. Add Function Implementation
 
-2. **Add to Function Matcher** (`matcher.go`):
-   ```go
-   supportedFunctions: map[string]bool{
-       // ... existing functions
-       "newfunc": true,
-   }
-   ```
+Create a new file with the `!official` build tag (or add to `functions_custom.go`):
 
-3. **Implement Handler and Extractor**:
-   ```go
-   func newFuncHandler(variables map[string]interface{}) func(args ...string) string {
-       return func(args ...string) string {
-           // Implementation
-       }
-   }
+```go
+//go:build !official
+// +build !official
 
-   func extractNewFuncVariables(args []parse.Node, cycle int) ([]string, error) {
-       // Extract variable names from arguments
-   }
-   ```
+package main
+
+// Add to init() function in functions_custom.go
+func init() {
+    registry := GetGlobalRegistry()
+    
+    registry.RegisterFunction(&FunctionDefinition{
+        Name:                  "newfunc",
+        Description:           "New function description",
+        Handler:               newfuncMinimalHandler,
+        Extractor:             extractNewfuncVariables,
+        ExtractorWithDefaults: extractNewfuncVariablesWithDefaults,
+    })
+}
+
+// Minimal handler for parsing
+func newfuncMinimalHandler(args ...string) string {
+    return ""
+}
+
+// Render handler with actual logic
+func newfuncRenderHandler(variables map[string]interface{}) func(args ...string) string {
+    return func(args ...string) string {
+        // Implementation
+        return ""
+    }
+}
+
+// Variable extractors
+func extractNewfuncVariables(args []parse.Node, cycle int) ([]string, error) {
+    // Extract variable names from arguments
+    return extractStringArgVariable(args, cycle, 1)
+}
+
+func extractNewfuncVariablesWithDefaults(args []parse.Node, cycle int) ([]VariableInfo, error) {
+    // Extract variables with defaults
+    return extractStringArgVariableWithDefaults(args, cycle, 1, 2)
+}
+```
+
+### 2. Add to Render Function Map
+
+Update `CreateRenderFuncMap()` in `functions_custom.go`:
+
+```go
+func CreateRenderFuncMap(variables map[string]interface{}) map[string]interface{} {
+    return map[string]interface{}{
+        "getv":    getvRenderHandler(variables),
+        "exists":  existsRenderHandler(variables),
+        "get":     getRenderHandler(variables),
+        "jsonv":   jsonvRenderHandler(variables),
+        "newfunc": newfuncRenderHandler(variables),  // Add your function
+    }
+}
+```
+
+### 3. Rebuild
+
+```bash
+./build.sh
+```
+
+That's it! Your new function is now available in the custom build.
+
+## 🎯 Benefits of New Architecture
+
+✅ **Cleaner Separation**: Build tags handle official vs custom at compile time  
+✅ **Easy to Extend**: Add new functions by creating new files with build tags  
+✅ **Less Code Duplication**: Shared core logic, only functions differ  
+✅ **Better Maintainability**: Clear structure, single responsibility per file  
+✅ **Confd-style Extensibility**: Easy to add more custom functions like Confd  
+✅ **No Runtime Configuration**: All decisions made at compile time for better performance  
+✅ **Single Source of Truth**: FunctionRegistry is the only place tracking functions  
 
 ## 🤝 Contributing
 

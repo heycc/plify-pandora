@@ -10,84 +10,71 @@ import (
 
 // Test functions that don't require WASM/JS dependencies
 
-func TestDefaultFunctionMatcher_MatchCustomFunc_Pure(t *testing.T) {
-	matcher := NewDefaultFunctionMatcher()
+func TestFunctionRegistry_RegisterFunction_Pure(t *testing.T) {
+	registry := NewFunctionRegistry()
 
-	tests := []struct {
-		name     string
-		funcName string
-		expected bool
-	}{
-		{
-			name:     "matching function - exists",
-			funcName: "exists",
-			expected: true,
-		},
-		{
-			name:     "matching function - get",
-			funcName: "get",
-			expected: true,
-		},
-		{
-			name:     "matching function - getv",
-			funcName: "getv",
-			expected: true,
-		},
-		{
-			name:     "matching function - jsonv",
-			funcName: "jsonv",
-			expected: true,
-		},
-		{
-			name:     "non-matching function - printf",
-			funcName: "printf",
-			expected: false,
-		},
-		{
-			name:     "non-matching function - eq",
-			funcName: "eq",
-			expected: false,
-		},
-		{
-			name:     "empty function name",
-			funcName: "",
-			expected: false,
-		},
-		{
-			name:     "case sensitive test",
-			funcName: "Exists",
-			expected: false,
-		},
+	funcDef := &FunctionDefinition{
+		Name:        "testfunc",
+		Description: "Test function",
+		Handler:     func() string { return "test" },
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := matcher.MatchCustomFunc(tt.funcName)
-			if result != tt.expected {
-				t.Errorf("MatchCustomFunc() = %v, want %v", result, tt.expected)
-			}
-		})
+	registry.RegisterFunction(funcDef)
+
+	got, exists := registry.GetFunction("testfunc")
+	if !exists {
+		t.Error("RegisterFunction() function not found after registration")
+	}
+	if got != funcDef {
+		t.Errorf("RegisterFunction() = %v, want %v", got, funcDef)
 	}
 }
 
-func TestNewFunctionHandler_Pure(t *testing.T) {
-	variables := map[string]interface{}{
-		"key1": "value1",
-		"key2": 123,
+func TestFunctionRegistry_HasFunction_Pure(t *testing.T) {
+	registry := NewFunctionRegistry()
+
+	if registry.HasFunction("testfunc") {
+		t.Error("HasFunction() returned true for non-existent function")
 	}
 
-	handler := NewFunctionHandler(variables)
+	registry.RegisterFunction(&FunctionDefinition{
+		Name:    "testfunc",
+		Handler: func() string { return "test" },
+	})
 
-	if handler == nil {
-		t.Fatal("NewFunctionHandler() returned nil")
-	}
-
-	if !reflect.DeepEqual(handler.variables, variables) {
-		t.Errorf("NewFunctionHandler() variables = %v, want %v", handler.variables, variables)
+	if !registry.HasFunction("testfunc") {
+		t.Error("HasFunction() returned false for registered function")
 	}
 }
 
-func TestFunctionHandler_getvFunc_Pure(t *testing.T) {
+func TestFunctionRegistry_GetFunctionNames_Pure(t *testing.T) {
+	registry := NewFunctionRegistry()
+
+	registry.RegisterFunction(&FunctionDefinition{
+		Name:    "func1",
+		Handler: func() string { return "test1" },
+	})
+	registry.RegisterFunction(&FunctionDefinition{
+		Name:    "func2",
+		Handler: func() string { return "test2" },
+	})
+
+	names := registry.GetFunctionNames()
+	if len(names) != 2 {
+		t.Errorf("GetFunctionNames() returned %d functions, want 2", len(names))
+	}
+
+	// Check that both function names are present
+	nameMap := make(map[string]bool)
+	for _, name := range names {
+		nameMap[name] = true
+	}
+	if !nameMap["func1"] || !nameMap["func2"] {
+		t.Errorf("GetFunctionNames() = %v, want [func1, func2]", names)
+	}
+}
+
+func TestGetvRenderHandler_Pure(t *testing.T) {
 	tests := []struct {
 		name      string
 		variables map[string]interface{}
@@ -144,15 +131,15 @@ func TestFunctionHandler_getvFunc_Pure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getvFunc(tt.variables)(tt.key, tt.defaults...)
+			result := getvRenderHandler(tt.variables)(tt.key, tt.defaults...)
 			if result != tt.expected {
-				t.Errorf("getvFunc() = %v, want %v", result, tt.expected)
+				t.Errorf("getvRenderHandler() = %v, want %v", result, tt.expected)
 			}
 		})
 	}
 }
 
-func TestFunctionHandler_existsFunc_Pure(t *testing.T) {
+func TestExistsRenderHandler_Pure(t *testing.T) {
 	variables := map[string]interface{}{
 		"name": "john",
 		"age":  25,
@@ -187,15 +174,15 @@ func TestFunctionHandler_existsFunc_Pure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := existsFunc(variables)(tt.key)
+			result := existsRenderHandler(variables)(tt.key)
 			if result != tt.expected {
-				t.Errorf("existsFunc() = %v, want %v", result, tt.expected)
+				t.Errorf("existsRenderHandler() = %v, want %v", result, tt.expected)
 			}
 		})
 	}
 }
 
-func TestFunctionHandler_getFunc_Pure(t *testing.T) {
+func TestGetRenderHandler_Pure(t *testing.T) {
 	variables := map[string]interface{}{
 		"name": "john",
 		"age":  25,
@@ -229,47 +216,180 @@ func TestFunctionHandler_getFunc_Pure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getFunc(variables)(tt.key)
+			got, err := getRenderHandler(variables)(tt.key)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("getFunc() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("getRenderHandler() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.wantValue) {
-				t.Errorf("getFunc() = %v, want %v", got, tt.wantValue)
+				t.Errorf("getRenderHandler() = %v, want %v", got, tt.wantValue)
 			}
 		})
 	}
 }
 
 func TestNewParser_Pure(t *testing.T) {
-	matcher := NewDefaultFunctionMatcher()
+	registry := NewFunctionRegistry()
 
-	parser := NewParser(matcher)
+	parser := NewParser(registry)
 
 	if parser == nil {
 		t.Fatal("NewParser() returned nil")
 	}
 
-	if parser.functionMatcher != matcher {
-		t.Errorf("NewParser() functionMatcher = %v, want %v", parser.functionMatcher, matcher)
+	if parser.registry != registry {
+		t.Errorf("NewParser() registry = %v, want %v", parser.registry, registry)
 	}
 }
 
-func TestFunctionHandler_CreateFuncMap_Pure(t *testing.T) {
-	handler := NewFunctionHandler(map[string]interface{}{
-		"key1": "value1",
-	})
+func TestParser_ExtractVariables_Pure(t *testing.T) {
+	helper := NewTestHelper()
 
-	funcMap := handler.CreateFuncMap()
+	// Test with custom functions
+	parserCustom := helper.NewParserWithCustomFunctions()
+	parserOfficial := helper.NewParserWithOfficialFunctions()
 
-	if funcMap == nil {
-		t.Fatal("CreateFuncMap() returned nil")
+	tests := []struct {
+		name             string
+		fileName         string
+		fileContent      string
+		expectedCustom   []string
+		expectedOfficial []string
+		wantErrCustom    bool
+		wantErrOfficial  bool
+	}{
+		{
+			name:             "simple field",
+			fileName:         "test.tmpl",
+			fileContent:      `Hello {{.Name}}!`,
+			expectedCustom:   []string{"Name"},
+			expectedOfficial: []string{"Name"},
+			wantErrCustom:    false,
+			wantErrOfficial:  false,
+		},
+		{
+			name:             "nested field",
+			fileName:         "test.tmpl",
+			fileContent:      `Hello {{.User.Name}}!`,
+			expectedCustom:   []string{"User.Name"},
+			expectedOfficial: []string{"User.Name"},
+			wantErrCustom:    false,
+			wantErrOfficial:  false,
+		},
+		{
+			name:             "custom function with string parameter",
+			fileName:         "test.tmpl",
+			fileContent:      `{{getv "username"}}`,
+			expectedCustom:   []string{"username"},
+			expectedOfficial: nil,
+			wantErrCustom:    false,
+			wantErrOfficial:  true, // Official parser errors on undefined functions
+		},
+		{
+			name:             "custom function with field parameter",
+			fileName:         "test.tmpl",
+			fileContent:      `{{getv .Key}}`,
+			expectedCustom:   []string{"Key"},
+			expectedOfficial: nil,
+			wantErrCustom:    false,
+			wantErrOfficial:  true, // Official parser errors on undefined functions
+		},
+		{
+			name:             "multiple variables",
+			fileName:         "test.tmpl",
+			fileContent:      `Hello {{.Name}}, your email is {{.Email}} and username is {{getv "username"}}`,
+			expectedCustom:   []string{"Name", "Email", "username"},
+			expectedOfficial: nil,
+			wantErrCustom:    false,
+			wantErrOfficial:  true, // Official parser errors on undefined functions
+		},
+		{
+			name:             "if statement",
+			fileName:         "test.tmpl",
+			fileContent:      `{{if .Enabled}}{{.Name}}{{end}}`,
+			expectedCustom:   []string{"Enabled", "Name"},
+			expectedOfficial: []string{"Enabled", "Name"},
+			wantErrCustom:    false,
+			wantErrOfficial:  false,
+		},
+		{
+			name:             "range statement",
+			fileName:         "test.tmpl",
+			fileContent:      `{{range .Items}}{{.Name}}{{end}}`,
+			expectedCustom:   []string{"Items", "Name"},
+			expectedOfficial: []string{"Items", "Name"},
+			wantErrCustom:    false,
+			wantErrOfficial:  false,
+		},
+		{
+			name:             "with statement",
+			fileName:         "test.tmpl",
+			fileContent:      `{{with .User}}{{.Name}}{{end}}`,
+			expectedCustom:   []string{"User", "Name"},
+			expectedOfficial: []string{"User", "Name"},
+			wantErrCustom:    false,
+			wantErrOfficial:  false,
+		},
+		{
+			name:             "non-matching function should process arguments",
+			fileName:         "test.tmpl",
+			fileContent:      `{{printf "%s" "hello"}}`,
+			expectedCustom:   []string{},
+			expectedOfficial: []string{},
+			wantErrCustom:    false,
+			wantErrOfficial:  false,
+		},
+		{
+			name:             "invalid template",
+			fileName:         "test.tmpl",
+			fileContent:      `{{.unclosed`,
+			expectedCustom:   nil,
+			expectedOfficial: nil,
+			wantErrCustom:    true,
+			wantErrOfficial:  true,
+		},
+		{
+			name:             "template with else branch",
+			fileName:         "test.tmpl",
+			fileContent:      `{{if .Active}}{{.Name}}{{else}}{{.DefaultName}}{{end}}`,
+			expectedCustom:   []string{"Active", "Name", "DefaultName"},
+			expectedOfficial: []string{"Active", "Name", "DefaultName"},
+			wantErrCustom:    false,
+			wantErrOfficial:  false,
+		},
 	}
 
-	expectedFuncs := []string{"getv", "exists", "get", "jsonv"}
-	for _, funcName := range expectedFuncs {
-		if _, exists := funcMap[funcName]; !exists {
-			t.Errorf("CreateFuncMap() missing function %s", funcName)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name+"_custom", func(t *testing.T) {
+			got, err := parserCustom.ExtractVariables(tt.fileName, tt.fileContent)
+			if (err != nil) != tt.wantErrCustom {
+				t.Errorf("ExtractVariables() error = %v, wantErr %v", err, tt.wantErrCustom)
+				return
+			}
+			if !tt.wantErrCustom {
+				// Handle empty slice comparison
+				if len(got) == 0 && len(tt.expectedCustom) == 0 {
+					// Both empty, this is fine
+				} else if !reflect.DeepEqual(got, tt.expectedCustom) {
+					t.Errorf("ExtractVariables() = %v, want %v", got, tt.expectedCustom)
+				}
+			}
+		})
+
+		t.Run(tt.name+"_official", func(t *testing.T) {
+			got, err := parserOfficial.ExtractVariables(tt.fileName, tt.fileContent)
+			if (err != nil) != tt.wantErrOfficial {
+				t.Errorf("ExtractVariables() error = %v, wantErr %v", err, tt.wantErrOfficial)
+				return
+			}
+			if !tt.wantErrOfficial {
+				// Handle empty slice comparison
+				if len(got) == 0 && len(tt.expectedOfficial) == 0 {
+					// Both empty, this is fine
+				} else if !reflect.DeepEqual(got, tt.expectedOfficial) {
+					t.Errorf("ExtractVariables() = %v, want %v", got, tt.expectedOfficial)
+				}
+			}
+		})
 	}
 }

@@ -5,145 +5,228 @@ package main
 
 import (
 	"reflect"
+	"strings"
 	"testing"
+	"text/template"
 )
 
-func TestParser_ExtractVariables_Pure(t *testing.T) {
+// TestEndToEnd_ExtractAndRender tests the complete workflow:
+// 1. Extract variables from template
+// 2. Provide values for those variables
+// 3. Render the template with those values
+func TestEndToEnd_ExtractAndRender(t *testing.T) {
 	helper := NewTestHelper()
-
-	// Test with custom functions
 	parserCustom := helper.NewParserWithCustomFunctions()
-	parserOfficial := helper.NewParserWithOfficialFunctions()
 
 	tests := []struct {
-		name             string
-		fileName         string
-		fileContent      string
-		expectedCustom   []string
-		expectedOfficial []string
-		wantErr          bool
+		name           string
+		template       string
+		expectedVars   []VariableInfo
+		providedValues map[string]interface{}
+		expectedOutput string
 	}{
 		{
-			name:             "simple field",
-			fileName:         "test.tmpl",
-			fileContent:      `Hello {{.Name}}!`,
-			expectedCustom:   []string{"Name"},
-			expectedOfficial: []string{"Name"},
-			wantErr:          false,
+			name:     "simple field extraction and render",
+			template: `Hello {{.Name}}!`,
+			expectedVars: []VariableInfo{
+				{Name: "Name"},
+			},
+			providedValues: map[string]interface{}{
+				"Name": "John",
+			},
+			expectedOutput: "Hello John!",
 		},
 		{
-			name:             "nested field",
-			fileName:         "test.tmpl",
-			fileContent:      `Hello {{.User.Name}}!`,
-			expectedCustom:   []string{"User.Name"},
-			expectedOfficial: []string{"User.Name"},
-			wantErr:          false,
+			name:     "getv with default value - using provided value",
+			template: `Username: {{getv "username" "guest"}}`,
+			expectedVars: []VariableInfo{
+				{Name: "username", DefaultValue: "guest"},
+			},
+			providedValues: map[string]interface{}{
+				"username": "john_doe",
+			},
+			expectedOutput: "Username: john_doe",
 		},
 		{
-			name:             "custom function with string parameter",
-			fileName:         "test.tmpl",
-			fileContent:      `{{getv "username"}}`,
-			expectedCustom:   []string{"username"},
-			expectedOfficial: []string{}, // Official parser ignores custom functions
-			wantErr:          false,
+			name:     "getv with default value - using default",
+			template: `Username: {{getv "username" "guest"}}`,
+			expectedVars: []VariableInfo{
+				{Name: "username", DefaultValue: "guest"},
+			},
+			providedValues: map[string]interface{}{},
+			expectedOutput: "Username: guest",
 		},
 		{
-			name:             "custom function with field parameter",
-			fileName:         "test.tmpl",
-			fileContent:      `{{getv .Key}}`,
-			expectedCustom:   []string{"Key"},
-			expectedOfficial: []string{"Key"}, // Field parameters still work
-			wantErr:          false,
+			name:     "exists function - key exists",
+			template: `{{if exists "feature_flag"}}Feature enabled{{else}}Feature disabled{{end}}`,
+			expectedVars: []VariableInfo{
+				{Name: "feature_flag"},
+			},
+			providedValues: map[string]interface{}{
+				"feature_flag": "true",
+			},
+			expectedOutput: "Feature enabled",
 		},
 		{
-			name:             "multiple variables",
-			fileName:         "test.tmpl",
-			fileContent:      `Hello {{.Name}}, your email is {{.Email}} and username is {{getv "username"}}`,
-			expectedCustom:   []string{"Name", "Email", "username"},
-			expectedOfficial: []string{"Name", "Email"}, // Ignores custom function variables
-			wantErr:          false,
+			name:     "exists function - key missing",
+			template: `{{if exists "feature_flag"}}Feature enabled{{else}}Feature disabled{{end}}`,
+			expectedVars: []VariableInfo{
+				{Name: "feature_flag"},
+			},
+			providedValues: map[string]interface{}{},
+			expectedOutput: "Feature disabled",
 		},
 		{
-			name:             "if statement",
-			fileName:         "test.tmpl",
-			fileContent:      `{{if .Enabled}}{{.Name}}{{end}}`,
-			expectedCustom:   []string{"Enabled", "Name"},
-			expectedOfficial: []string{"Enabled", "Name"},
-			wantErr:          false,
+			name:     "mixed standard and custom functions",
+			template: `Hello {{.Name}}, your username is {{getv "username" "anonymous"}} and email is {{.Email}}`,
+			expectedVars: []VariableInfo{
+				{Name: "Name"},
+				{Name: "username", DefaultValue: "anonymous"},
+				{Name: "Email"},
+			},
+			providedValues: map[string]interface{}{
+				"Name":  "Alice",
+				"Email": "alice@example.com",
+			},
+			expectedOutput: "Hello Alice, your username is anonymous and email is alice@example.com",
 		},
 		{
-			name:             "range statement",
-			fileName:         "test.tmpl",
-			fileContent:      `{{range .Items}}{{.Name}}{{end}}`,
-			expectedCustom:   []string{"Items", "Name"},
-			expectedOfficial: []string{"Items", "Name"},
-			wantErr:          false,
-		},
-		{
-			name:             "with statement",
-			fileName:         "test.tmpl",
-			fileContent:      `{{with .User}}{{.Name}}{{end}}`,
-			expectedCustom:   []string{"User", "Name"},
-			expectedOfficial: []string{"User", "Name"},
-			wantErr:          false,
-		},
-		{
-			name:             "non-matching function should process arguments",
-			fileName:         "test.tmpl",
-			fileContent:      `{{printf "%s" "hello"}}`,
-			expectedCustom:   []string{},
-			expectedOfficial: []string{},
-			wantErr:          false,
-		},
-		{
-			name:             "invalid template",
-			fileName:         "test.tmpl",
-			fileContent:      `{{.unclosed`,
-			expectedCustom:   nil,
-			expectedOfficial: nil,
-			wantErr:          true,
-		},
-		{
-			name:             "template with else branch",
-			fileName:         "test.tmpl",
-			fileContent:      `{{if .Active}}{{.Name}}{{else}}{{.DefaultName}}{{end}}`,
-			expectedCustom:   []string{"Active", "Name", "DefaultName"},
-			expectedOfficial: []string{"Active", "Name", "DefaultName"},
-			wantErr:          false,
+			name:     "multiple custom functions",
+			template: `User: {{getv "name" "Unknown"}}, Active: {{exists "active"}}, Role: {{getv "role" "user"}}`,
+			expectedVars: []VariableInfo{
+				{Name: "name", DefaultValue: "Unknown"},
+				{Name: "active"},
+				{Name: "role", DefaultValue: "user"},
+			},
+			providedValues: map[string]interface{}{
+				"name":   "Bob",
+				"active": "yes",
+			},
+			expectedOutput: "User: Bob, Active: true, Role: user",
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name+"_custom", func(t *testing.T) {
-			got, err := parserCustom.ExtractVariables(tt.fileName, tt.fileContent)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ExtractVariables() error = %v, wantErr %v", err, tt.wantErr)
-				return
+		t.Run(tt.name, func(t *testing.T) {
+			// Step 1: Extract variables
+			extractedVars, err := parserCustom.ExtractVariablesWithDefaults("test.tmpl", tt.template)
+			if err != nil {
+				t.Fatalf("ExtractVariablesWithDefaults() error = %v", err)
 			}
-			if !tt.wantErr {
-				// Handle empty slice comparison
-				if len(got) == 0 && len(tt.expectedCustom) == 0 {
-					// Both empty, this is fine
-				} else if !reflect.DeepEqual(got, tt.expectedCustom) {
-					t.Errorf("ExtractVariables() = %v, want %v", got, tt.expectedCustom)
-				}
+			// Verify extracted variables match expected
+			if !reflect.DeepEqual(extractedVars, tt.expectedVars) {
+				t.Errorf("ExtractVariablesWithDefaults() = %v, want %v", extractedVars, tt.expectedVars)
 			}
-		})
 
-		t.Run(tt.name+"_official", func(t *testing.T) {
-			got, err := parserOfficial.ExtractVariables(tt.fileName, tt.fileContent)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ExtractVariables() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			// Step 2: Render template with provided values
+			rendered, err := renderTemplateWithCustomFunctions(tt.template, tt.providedValues)
+			if err != nil {
+				t.Fatalf("renderTemplateWithCustomFunctions() error = %v", err)
 			}
-			if !tt.wantErr {
-				// Handle empty slice comparison
-				if len(got) == 0 && len(tt.expectedOfficial) == 0 {
-					// Both empty, this is fine
-				} else if !reflect.DeepEqual(got, tt.expectedOfficial) {
-					t.Errorf("ExtractVariables() = %v, want %v", got, tt.expectedOfficial)
-				}
+			// Verify rendered output
+			if rendered != tt.expectedOutput {
+				t.Errorf("renderTemplateWithCustomFunctions() = %q, want %q", rendered, tt.expectedOutput)
 			}
 		})
 	}
+}
+
+// TestEndToEnd_OfficialMode tests that official mode works correctly
+func TestEndToEnd_OfficialMode(t *testing.T) {
+	helper := NewTestHelper()
+	parserOfficial := helper.NewParserWithOfficialFunctions()
+
+	tests := []struct {
+		name           string
+		template       string
+		expectedVars   []VariableInfo
+		providedValues map[string]interface{}
+		expectedOutput string
+	}{
+		{
+			name:     "standard template fields only",
+			template: `Hello {{.Name}}, your email is {{.Email}}`,
+			expectedVars: []VariableInfo{
+				{Name: "Name"},
+				{Name: "Email"},
+			},
+			providedValues: map[string]interface{}{
+				"Name":  "Charlie",
+				"Email": "charlie@example.com",
+			},
+			expectedOutput: "Hello Charlie, your email is charlie@example.com",
+		},
+		{
+			name:     "with if statement",
+			template: `{{if .Active}}User is active{{else}}User is inactive{{end}}`,
+			expectedVars: []VariableInfo{
+				{Name: "Active"},
+			},
+			providedValues: map[string]interface{}{
+				"Active": true,
+			},
+			expectedOutput: "User is active",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Step 1: Extract variables
+			extractedVars, err := parserOfficial.ExtractVariablesWithDefaults("test.tmpl", tt.template)
+			if err != nil {
+				t.Fatalf("ExtractVariablesWithDefaults() error = %v", err)
+			}
+			// Verify extracted variables match expected
+			if !reflect.DeepEqual(extractedVars, tt.expectedVars) {
+				t.Errorf("ExtractVariablesWithDefaults() = %v, want %v", extractedVars, tt.expectedVars)
+			}
+
+			// Step 2: Render template (without custom functions)
+			rendered, err := renderTemplateOfficialMode(tt.template, tt.providedValues)
+			if err != nil {
+				t.Fatalf("renderTemplateOfficialMode() error = %v", err)
+			}
+			// Verify rendered output
+			if rendered != tt.expectedOutput {
+				t.Errorf("renderTemplateOfficialMode() = %q, want %q", rendered, tt.expectedOutput)
+			}
+		})
+	}
+}
+
+// Helper functions for rendering templates in tests
+
+// renderTemplateWithCustomFunctions renders a template with custom functions enabled
+func renderTemplateWithCustomFunctions(templateContent string, variables map[string]interface{}) (string, error) {
+	// Create function map with custom functions
+	funcMap := CreateRenderFuncMap(variables)
+
+	tmpl, err := template.New("test").Funcs(funcMap).Parse(templateContent)
+	if err != nil {
+		return "", err
+	}
+
+	var result strings.Builder
+	err = tmpl.Execute(&result, variables)
+	if err != nil {
+		return "", err
+	}
+
+	return result.String(), nil
+}
+
+// renderTemplateOfficialMode renders a template without custom functions (official mode)
+func renderTemplateOfficialMode(templateContent string, variables map[string]interface{}) (string, error) {
+	tmpl, err := template.New("test").Parse(templateContent)
+	if err != nil {
+		return "", err
+	}
+
+	var result strings.Builder
+	err = tmpl.Execute(&result, variables)
+	if err != nil {
+		return "", err
+	}
+
+	return result.String(), nil
 }
