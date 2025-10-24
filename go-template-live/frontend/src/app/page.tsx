@@ -95,6 +95,39 @@ export default function Home() {
     }
   }, []);
 
+  // Handle Cmd+S / Ctrl+S to update URL
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+        event.preventDefault(); // Prevent default browser save dialog
+        
+        if (!templateContent.trim()) {
+          console.log('Cannot update URL with empty template');
+          return;
+        }
+
+        try {
+          const shareableUrl = generateShareableUrl(templateContent);
+          if (shareableUrl) {
+            // Update URL without reloading the page
+            const url = new URL(shareableUrl);
+            window.history.replaceState({}, '', url.toString());
+            console.log('URL updated successfully');
+          } else {
+            console.warn('Template is too large to share via URL');
+          }
+        } catch (error) {
+          console.error('Failed to update URL:', error);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [templateContent]);
+
   // Initialize WASM
   useEffect(() => {
     const initializeWASM = async () => {
