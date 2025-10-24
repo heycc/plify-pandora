@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useEffect, useRef, useState } from 'react';
 
 interface TemplateDiffViewerProps {
@@ -10,6 +11,8 @@ interface TemplateDiffViewerProps {
   readOnly?: boolean;
   error?: string | null;
   wasmLoaded?: boolean;
+  onShare?: () => void;
+  shareStatus?: 'idle' | 'copying' | 'success' | 'error';
 }
 
 declare global {
@@ -25,7 +28,9 @@ export function TemplateDiffViewer({
   onOriginalChange,
   readOnly = false,
   error = null,
-  wasmLoaded = false
+  wasmLoaded = false,
+  onShare,
+  shareStatus = 'idle'
 }: TemplateDiffViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const diffEditorRef = useRef<any>(null);
@@ -116,7 +121,7 @@ export function TemplateDiffViewer({
       lineNumbers: 'on',
       lineNumbersMinChars: 3,
       wordWrap: 'on',
-      theme: 'vs-dark',
+      theme: 'vs-oceanic',
       diffWordWrap: 'on',
       ignoreTrimWhitespace: false,
       renderIndicators: true,
@@ -180,9 +185,53 @@ export function TemplateDiffViewer({
   return (
     <Card className="h-full flex flex-col gap-2 py-4 bg-white/70 backdrop-blur-sm">
       <CardHeader className="">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <span className="text-2xl">📝</span>
-          Template Diff Viewer
+        <CardTitle className="text-lg flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">📝</span>
+            Template Diff Viewer
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
+            {/* Error Display */}
+            {error && (
+              <div className="flex items-center gap-2 px-2 py-1 rounded-lg transition-all duration-300 bg-red-100 border-2 text-red-800 border-red-300 shadow-lg shadow-red-200/50"
+                style={{
+                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.8, 1) infinite',
+                  boxShadow: '0 0 20px rgba(3, 1, 1, 0.3)'
+                }}>
+                <div className="w-5 h-5 flex items-center justify-center text-lg">
+                  ⚠️
+                </div>
+                <div className="text-sm text-red-700">
+                  {error}
+                </div>
+              </div>
+            )}
+            {/* WASM Loading Status */}
+            {!wasmLoaded && !error && (
+            <div className="flex items-center gap-2 py-1 px-2 rounded-lg transition-all duration-300 bg-blue-50 border border-blue-200 text-blue-700">
+              <div className="w-5 h-5 flex items-center justify-center text-lg">
+                ⏳
+              </div>
+              <div className="text-sm text-blue-600">
+                Loading WebAssembly module...
+              </div>
+              </div>
+            )}
+            {/* Share Button */}
+            {onShare && (
+              <Button
+                className="hover:cursor-pointer bg-sky-700 hover:bg-sky-800 text-white transition-all duration-200"
+                variant="default"
+                size="sm"
+                onClick={onShare}
+                disabled={shareStatus === 'copying' || !original.trim()}
+              >
+                {shareStatus === 'copying' ? '📋 Copying...' :
+                 shareStatus === 'success' ? '✅ Copied!' :
+                 '🔗 Share'}
+              </Button>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
 
@@ -191,7 +240,7 @@ export function TemplateDiffViewer({
           {/* Monaco DiffEditor Container */}
           <div
             ref={containerRef}
-            className="flex-1 min-h-[140px] bg-gray-900 py-2 border-2 border-gray-800 rounded"
+            className="flex-1 min-h-[140px] py-2 border-2 border-gray-200 rounded-md"
             style={{ height: '100%' }}
           />
           <div className="flex justify-between items-center px-4 py-2 bg-muted text-sm text-muted-foreground border-t">
@@ -209,43 +258,7 @@ export function TemplateDiffViewer({
               </div>
             </div>
           </div>
-          {/* Error Display */}
-          {error && (
-            <div className="mt-3">
-              <div className="flex items-center gap-3 p-2 rounded-lg transition-all duration-300 bg-red-100 border-2 text-red-800 border-red-300 shadow-lg shadow-red-200/50"
-                style={{
-                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.8, 1) infinite',
-                  boxShadow: '0 0 20px rgba(3, 1, 1, 0.3)'
-                }}>
-                <div className="w-6 h-6 flex items-center justify-center text-xl">
-                  ⚠️
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm mt-1 text-red-700">
-                    {error}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* WASM Loading Status */}
-          {!wasmLoaded && !error && (
-            <div className="mt-3">
-              <div className="flex items-center gap-3 p-2 rounded-lg transition-all duration-300 bg-blue-50 border border-blue-200 text-blue-700">
-                <div className="w-6 h-6 flex items-center justify-center text-xl">
-                  ⏳
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm mt-1 text-blue-600">
-                    Loading WebAssembly module...
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
-
       </CardContent>
     </Card>
   );

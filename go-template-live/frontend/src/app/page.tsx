@@ -2,10 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TemplateDiffViewer } from '@/components/template-diff-viewer';
 import { VariablePanel } from '@/components/variable-panel';
-import { examples, defaultExamples, renderExamples } from '@/lib/template-examples';
+import { examples } from '@/lib/template-examples';
 import { wasmUtils } from '@/lib/wasm-utils';
 import { getTemplateTextFromUrl, copyShareableUrl, hasSharedTemplateInUrl, generateShareableUrl } from '@/lib/url-sharing';
 
@@ -18,7 +17,7 @@ export default function Home() {
   const [wasmLoaded, setWasmLoaded] = useState(false);
 
   // Template states
-  const [templateContent, setTemplateContent] = useState('');
+  const [templateContent, setTemplateContent] = useState(examples.Basic);
   const [renderedContent, setRenderedContent] = useState('');
 
   // Variable states
@@ -123,14 +122,6 @@ export default function Home() {
     setTemplateContent(examples[type]);
   };
 
-  const loadDefaultExample = (type: keyof typeof defaultExamples) => {
-    setTemplateContent(defaultExamples[type]);
-  };
-
-  const loadRenderExample = (type: keyof typeof renderExamples) => {
-    setTemplateContent(renderExamples[type]);
-  };
-
   // Helper function to get display name from key
   const getDisplayName = (key: string): string => {
     return key.replace(/_/g, ' ');
@@ -176,7 +167,7 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen mx-auto p-4 bg-gradient-to-br from-sky-200 to-amber-200 flex flex-col overflow-hidden">
+    <div className="h-screen mx-auto p-4 bg-gradient-to-b from-sky-200 to-amber-100 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="mb-2 border-0 flex-shrink-0 py-2">
         <div className="text-center text-blue-700 py-2">
@@ -195,10 +186,10 @@ export default function Home() {
           </div>
           <div className="py-0">
             <div className="flex space-x-2 flex-wrap">
-              {/* Basic Examples */}
+              {/* All Examples */}
               {Object.keys(examples).map(key => (
                 <Button
-                  key={`basic-${key}`}
+                  key={key}
                   className="hover:cursor-pointer"
                   variant="outline"
                   size="sm"
@@ -208,44 +199,7 @@ export default function Home() {
                 </Button>
               ))}
 
-              {/* Default Examples */}
-              {Object.keys(defaultExamples).map(key => (
-                <Button
-                  key={`default-${key}`}
-                  className="hover:cursor-pointer"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => loadDefaultExample(key as keyof typeof defaultExamples)}
-                >
-                  {getDisplayName(key)}
-                </Button>
-              ))}
-
-              {/* Render Examples */}
-              {Object.keys(renderExamples).map(key => (
-                <Button
-                  key={`render-${key}`}
-                  className="hover:cursor-pointer"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => loadRenderExample(key as keyof typeof renderExamples)}
-                >
-                  {getDisplayName(key)}
-                </Button>
-              ))}
-
               <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={clearTemplate}>🗑️ Clear All</Button>
-              <Button
-                className="hover:cursor-pointer bg-sky-700 hover:bg-sky-800 text-white transition-all duration-200"
-                variant="default"
-                size="sm"
-                onClick={handleShareTemplate}
-                disabled={shareStatus === 'copying' || !templateContent.trim()}
-              >
-                {shareStatus === 'copying' ? '📋 Copying...' :
-                 shareStatus === 'success' ? '✅ Copied!' :
-                 '🔗 Share Your Craft'}
-              </Button>
             </div>
           </div>
         </div>
@@ -262,6 +216,8 @@ export default function Home() {
             readOnly={!wasmLoaded}
             error={error}
             wasmLoaded={wasmLoaded}
+            onShare={handleShareTemplate}
+            shareStatus={shareStatus}
           />
         </div>
 
