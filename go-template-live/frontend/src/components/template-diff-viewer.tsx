@@ -243,7 +243,7 @@ export function TemplateDiffViewer({
             className="flex-1 min-h-[140px] py-2 border-2 border-gray-200 rounded-md"
             style={{ height: '100%' }}
           />
-          <div className="flex justify-between items-center px-4 py-2 bg-muted text-sm text-muted-foreground border-t">
+          <div className="flex justify-between items-center px-4 py-2 mt-1 bg-muted text-sm text-muted-foreground">
             <div className="text-xs">
               {readOnly ? 'Read-only Diff View' : '✏️ Edit template on left to see live rendering on right'}
             </div>

@@ -62,7 +62,7 @@ export default function Home() {
       setError(null); // Clear error on success
       return typeof result === 'string' ? result : '';
     } catch (error) {
-      const errorMessage = `Failed to render template: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setError(errorMessage);
       console.error('Failed to render template with WASM:', error);
       return '';
