@@ -13,6 +13,9 @@ declare global {
   }
 }
 
+// Get the base path from the environment variable or default to empty string
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 class WASMUtils {
   private isInitialized = false;
   private initializationPromise: Promise<void> | null = null;
@@ -36,14 +39,14 @@ class WASMUtils {
       console.log('Starting WASM loading...');
 
       // Load the Go WASM runtime
-      await this.loadScript('/wasm_exec.js');
+      await this.loadScript(`${BASE_PATH}/wasm_exec.js`);
       console.log('WASM runtime loaded');
 
       // Load and instantiate the WASM module
       const go = new (window as any).Go();
       console.log('Go instance created');
 
-      const wasmResponse = await fetch('/main.wasm');
+      const wasmResponse = await fetch(`${BASE_PATH}/main.wasm`);
       console.log('WASM fetch response:', wasmResponse.status);
 
       const result = await WebAssembly.instantiateStreaming(

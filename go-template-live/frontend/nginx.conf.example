@@ -1,0 +1,181 @@
+# Example Nginx Configuration for Template Parser
+# This file shows how to host the Next.js static export under a subdirectory
+
+# Single app with prefix (RECOMMENDED - Simple approach using 'root')
+server {
+    listen 80;
+    server_name example.com;
+
+    # ============================================================
+    # Template Parser at /template-parser
+    # ============================================================
+    # Using 'root' is simpler than 'alias'
+    # With root: /template-parser/file.js -> looks for /var/www/template-parser/file.js
+    # So your files should be at: /var/www/template-parser/index.html, /var/www/template-parser/_next/, etc.
+    #
+    # IMPORTANT: These location blocks CANNOT be nested!
+    # Nginx processes regex locations (~) before prefix locations,
+    # so the order here doesn't matter, but they must be at the same level.
+    # ============================================================
+    
+    # /template-parser - Next.js static files
+    location ~ ^/template-parser/_next/ {
+        root /var/www;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # /template-parser - Static assets (js, css, wasm, images, etc.)
+    location ~ ^/template-parser/.*\.(wasm|js|css|svg|ico|png|jpg|jpeg|gif|webp|woff|woff2)$ {
+        root /var/www;
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000";
+        
+        # Include default MIME types first
+        include /etc/nginx/mime.types;
+        
+        # Add WASM MIME type (not in default mime.types)
+        types {
+            application/wasm wasm;
+        }
+    }
+    
+    # /template-parser - Main HTML pages (SPA fallback)
+    location /template-parser {
+        root /var/www;
+        try_files $uri /template-parser/index.html;
+    }
+}
+
+# Multiple apps with different prefixes
+server {
+    listen 80;
+    server_name example.com;
+
+    # Root location (optional - could be another app or redirect)
+    location = / {
+        return 301 /template-parser;
+    }
+
+    # ============================================================
+    # Template Parser at /template-parser
+    # ============================================================
+    location ~ ^/template-parser/_next/ {
+        root /var/www;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location ~ ^/template-parser/.*\.(wasm|js|css|svg|ico|png|jpg|jpeg|gif|webp|woff|woff2)$ {
+        root /var/www;
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000";
+        
+        # Include default MIME types
+        include /etc/nginx/mime.types;
+        
+        # Add WASM MIME type
+        types {
+            application/wasm wasm;
+        }
+    }
+    
+    location /template-parser {
+        root /var/www;
+        try_files $uri /template-parser/index.html;
+    }
+
+    # ============================================================
+    # Dashboard at /dashboard
+    # ============================================================
+    location ~ ^/dashboard/_next/ {
+        root /var/www;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location ~ ^/dashboard/.*\.(wasm|js|css|svg|ico|png|jpg|jpeg|gif|webp|woff|woff2)$ {
+        root /var/www;
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000";
+        
+        include /etc/nginx/mime.types;
+        types {
+            application/wasm wasm;
+        }
+    }
+    
+    location /dashboard {
+        root /var/www;
+        try_files $uri /dashboard/index.html;
+    }
+
+    # ============================================================
+    # Admin panel at /admin
+    # ============================================================
+    location ~ ^/admin/_next/ {
+        root /var/www;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location ~ ^/admin/.*\.(wasm|js|css|svg|ico|png|jpg|jpeg|gif|webp|woff|woff2)$ {
+        root /var/www;
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000";
+        
+        include /etc/nginx/mime.types;
+        types {
+            application/wasm wasm;
+        }
+    }
+    
+    location /admin {
+        root /var/www;
+        try_files $uri /admin/index.html;
+    }
+
+    # API proxy (if you have a backend)
+    location /api {
+        proxy_pass http://localhost:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# Hosting at root (no prefix)
+server {
+    listen 80;
+    server_name template.example.com;
+
+    root /var/www/template-parser/out;
+    index index.html;
+
+    location / {
+        try_files $uri /index.html;
+    }
+    
+    # Handle Next.js static assets
+    location /_next/static/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # Handle public assets with proper MIME types
+    location ~* \.(wasm|js|css|svg|ico|png|jpg|jpeg|gif|webp|woff|woff2)$ {
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000";
+        
+        # Include default MIME types
+        include /etc/nginx/mime.types;
+        
+        # Add WASM MIME type
+        types {
+            application/wasm wasm;
+        }
+    }
+}
+
