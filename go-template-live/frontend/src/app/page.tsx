@@ -96,9 +96,19 @@ export default function Home() {
             newValues[variable.name] = variable.defaultValue || '';
           }
         });
+        
+        // Also preserve any user input values for variables that are no longer in the template
+        // This way if extraction fails temporarily or user is mid-edit, values are retained
+        Object.keys(currentValues).forEach(varName => {
+          if (newValues[varName] === undefined) {
+            newValues[varName] = currentValues[varName];
+          }
+        });
+        
         setVariableValues(newValues);
       }
       // If extraction fails, keep existing variables and values (don't clear them)
+      // The error state will be set by extractVariables() function
     };
 
     extractVars();
