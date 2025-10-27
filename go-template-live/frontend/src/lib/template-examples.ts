@@ -40,10 +40,10 @@ Key: {{$key}}, Value: {{$val}}
 
 ---
 {{- /* Note: \`json\` is a custom function, it takes a JSON string as input and returns a map. */}}
-{{- /* Try to input type {"Apple": "260", "Microsoft": "510"} at right panel and see the result. */}}
+{{- /* Try to input into the right panel a JSON string like {"Apple": "260", "Microsoft": "510"} and see the result. */}}
 `.trim(),
 
-  Nested_Fields: `
+  Nested: `
 {{with json "Config"}}
     Server: {{.host}}
     Port: {{.port}}
@@ -53,7 +53,7 @@ Key: {{$key}}, Value: {{$val}}
 {{end}}
 
 {{- /* Note: \`json\` is a custom function, it takes a JSON string as input and returns a map. */}}
-{{- /* Try to input type {"host": "127.0.0.1", "port":80} at right panel and see the result. */}}
+{{- /* Try to input into the right panel a JSON string like {"host": "127.0.0.1", "port":80} and see the result. */}}
 `.trim(),
 
   Email: `
@@ -66,14 +66,11 @@ Your items:
 - {{$item.name}}: \${{$item.price -}}
 {{end}}
 
-Total: \${{getv "total" "N/A"}}
-
-
 Best regards,
 {{getv "company" "Our Company"}}
 
 {{- /* Note: \`jsonArray\`, \`exists\`, \`getv\` are custom functions */}}
-{{- /* Try to input items like [{"name": "Apple", "price": 1.99}, {"name": "Banana", "price": 0.99}] at right panel and see the result. */}}
+{{- /* Try to input into the right panel a JSON string like [{"name": "Apple", "price": 1.99}, {"name": "Banana", "price": 0.99}] and see the result. */}}
 `.trim(),
 
   Format_Control: `
