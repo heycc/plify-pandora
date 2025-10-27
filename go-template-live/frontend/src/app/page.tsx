@@ -262,11 +262,18 @@ export default function Home() {
     <div className="h-screen mx-auto p-4 bg-gradient-to-b from-sky-200 to-amber-100 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="mb-2 border-0 flex-shrink-0 py-2">
-        <div className="text-center text-blue-700 py-2">
-          <h1 className="text-3xl font-bold mb-2">Golang Template Live Preview</h1>
-          <h2 className="text-gray-500 text-lg">
-            Type in Golang template, extract variables, render and view the diff in real-time 🚀
-          </h2>
+        <div className="flex items-start gap-4 py-2">
+          <a href="/" title='Go to home page' target='_blank' className="block">
+            <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/logo_name.svg`} alt="Plify Logo" className="h-15 w-auto" />
+          </a>
+          <div className="flex-1 text-center">
+            <h1 className="font-[family-name:var(--font-outfit)] text-5xl font-extrabold mb-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight leading-tight">
+              Golang Template Live
+            </h1>
+            <h2 className="font-[family-name:var(--font-outfit)] text-gray-600 text-lg font-medium">
+              Type in Golang template, extract variables, render and view the diff in real-time 🚀
+            </h2>
+          </div>
         </div>
       </div>
 
