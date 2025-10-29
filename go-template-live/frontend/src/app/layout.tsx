@@ -23,14 +23,15 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || '';
 
 export const metadata: Metadata = {
-  title: "Plify - Golang Template Live",
-  description: "Type in Golang template, extract variables, render and view the diff in real-time",
+  title: "Golang Template Live Preview | Plify",
+  description: "Free online Go template editor with instant live preview, automatic variable extraction, and side-by-side diff comparison. Test Golang text/template syntax, debug template rendering, and visualize changes in real-time. Perfect for Go developers building dynamic templates.",
+  keywords: "golang template editor, golang template live preview, go template variable extraction, golang template syntax, go template debugging, online go editor, template diff viewer",
   icons: {
     icon: `${BASE_PATH}/favicon.ico`,
   },
   openGraph: {
-    title: "Plify - Golang Template Live",
-    description: "Type in Golang template, extract variables, render and view the diff in real-time",
+    title: "Golang Template Live Preview | Plify",
+    description: "Free online Go template editor with instant live preview, automatic variable extraction, and side-by-side diff comparison. Test Golang text/template syntax, debug template rendering, and visualize changes in real-time. Perfect for Go developers building dynamic templates.",
     images: [
       {
         url: `${SITE_URL}${BASE_PATH}/logo_name_og.png`,
