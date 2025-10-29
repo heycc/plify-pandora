@@ -121,6 +121,19 @@
   }
 }
 
+/* Custom page styles */
+.page-container {
+  background-color: #007d9c;
+}
+
+.page-title {
+  color: #ffffff;
+}
+
+.page-subtitle {
+  color: #ffffff;
+}
+
 /* Monaco Editor Diff Highlighting */
 .diff-removed-line {
   background-color: rgba(255, 100, 100, 0.15) !important;

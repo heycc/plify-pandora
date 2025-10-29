@@ -183,7 +183,7 @@ export function TemplateDiffViewer({
   }, [original, modified]);
 
   return (
-    <Card className="h-full flex flex-col gap-2 py-4 bg-white/70 backdrop-blur-sm">
+    <Card className="h-full flex flex-col gap-2 py-4 bg-gray-100 backdrop-blur-sm">
       <CardHeader className="">
         <CardTitle className="text-lg flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -240,7 +240,7 @@ export function TemplateDiffViewer({
           {/* Monaco DiffEditor Container */}
           <div
             ref={containerRef}
-            className="flex-1 min-h-[140px] py-2 border-2 border-gray-200 rounded-md"
+            className="flex-1 min-h-[140px] py-0 border-8 border-gray-200/50 rounded-lg"
             style={{ height: '100%' }}
           />
           <div className="flex justify-between items-center px-4 py-2 mt-1 bg-muted text-sm text-muted-foreground">

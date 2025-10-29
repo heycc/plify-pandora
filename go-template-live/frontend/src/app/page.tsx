@@ -259,18 +259,18 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen mx-auto p-4 bg-gradient-to-b from-sky-200 to-amber-100 flex flex-col overflow-hidden">
+    <div className="h-screen mx-auto p-4 flex flex-col overflow-hidden page-container">
       {/* Header */}
       <div className="mb-2 border-0 flex-shrink-0 py-2">
         <div className="flex items-start gap-4 py-2">
           <a href="/" title='Go to home page' target='_blank' className="block">
             <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/logo_name.svg`} alt="Plify Logo" className="h-15 w-auto" />
           </a>
-          <div className="flex-1 text-center">
-            <h1 className="font-[family-name:var(--font-outfit)] text-5xl font-extrabold mb-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight leading-tight">
+          <div className="flex-1 flex flex-col items-center justify-center text-center mr-28">
+            <h1 className="font-[family-name:var(--font-outfit)] text-5xl font-semibold mb-2 tracking-tight leading-tight text-slate-50">
               Golang Template Live
             </h1>
-            <h2 className="font-[family-name:var(--font-outfit)] text-gray-600 text-lg font-medium">
+            <h2 className="font-[family-name:var(--font-outfit)] text-gray-600 text-lg font-medium tracking-tight leading-tight page-subtitle">
               Type in Golang template, extract variables, render and view the diff in real-time 🚀
             </h2>
           </div>
@@ -279,7 +279,7 @@ export default function Home() {
 
       {/* Example Templates */}
       <section className="flex-shrink-0">
-        <div className="flex flex-row gap-2 px-6 py-2 bg-white/50 backdrop-blur-sm rounded-lg items-center justify-start">
+        <div className="flex flex-row gap-2 px-6 py-2 bg-gray-200/80 backdrop-blur-sm rounded-lg items-center justify-start">
           <div className="py-0">
             <h3 className="text-medium font-semibold">Quick Start Examples</h3>
           </div>
@@ -290,7 +290,7 @@ export default function Home() {
                 <Button
                   key={key}
                   className="hover:cursor-pointer"
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => loadExample(key as keyof typeof examples)}
                 >
@@ -298,7 +298,7 @@ export default function Home() {
                 </Button>
               ))}
 
-              <Button className="hover:cursor-pointer" variant="outline" size="sm" onClick={clearTemplate}>🗑️ Clear All</Button>
+              <Button className="hover:cursor-pointer" variant="ghost" size="sm" onClick={clearTemplate}>🗑️ Clear All</Button>
             </div>
           </div>
         </div>
