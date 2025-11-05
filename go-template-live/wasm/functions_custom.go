@@ -1,5 +1,5 @@
-//go:build !official
-// +build !official
+//go:build js && custom
+// +build js,custom
 
 package main
 
@@ -10,12 +10,12 @@ import (
 )
 
 // This file contains custom functions inspired by Confd
-// These functions are only included when building WITHOUT the "official" tag
-// Build with: GOOS=js GOARCH=wasm go build -o custom.wasm .
+// These functions are only included when building WITH the "custom" tag
+// Build with: GOOS=js GOARCH=wasm go build -tags custom -o custom.wasm .
 
 func init() {
 	// Register custom functions on initialization
-	// This only happens when the "official" build tag is NOT present
+	// This only happens when building with the "custom" tag
 	registerCustomFunctions()
 }
 

@@ -1,5 +1,5 @@
-//go:build official
-// +build official
+//go:build js && official
+// +build js,official
 
 package main
 

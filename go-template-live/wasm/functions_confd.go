@@ -1,5 +1,5 @@
-//go:build !official
-// +build !official
+//go:build js && confd
+// +build js,confd
 
 package main
 
@@ -16,7 +16,7 @@ import (
 
 func init() {
 	// Register Confd-style functions on initialization
-	// This only happens when the "official" build tag is NOT present
+	// This only happens when building with the "confd" tag
 	registerConfdFunctions()
 }
 
@@ -555,8 +555,8 @@ func extractFirstArgVariableInfo(args []parse.Node, cycle int) ([]VariableInfo, 
 	return extractArgVariableWithDefaults(args, cycle, 1, -1, false)
 }
 
-// CreateConfdRenderFuncMap creates function map with actual variable values for rendering Confd functions
-func CreateConfdRenderFuncMap(variables map[string]interface{}) map[string]interface{} {
+// CreateRenderFuncMap creates function map with actual variable values for rendering Confd functions
+func CreateRenderFuncMap(variables map[string]interface{}) map[string]interface{} {
 	return map[string]interface{}{
 		"base":         baseRenderHandler(variables),
 		"split":        splitRenderHandler(variables),
