@@ -4,17 +4,24 @@ import (
 	"text/template/parse"
 )
 
-// extractStringArgVariable is a helper function to extract variable from string arguments
-// This is used by many custom functions that take a key as their first argument
-func extractStringArgVariable(args []parse.Node, cycle int, argIndex int) ([]string, error) {
+// extractArgVariable is a helper function to extract variables from function arguments
+// argIndex: the index of the argument to extract from
+// treatStringLiteralsAsVarNames: if true, string literals like "myvar" are treated as variable names (for json, getv);
+//
+//	if false, only field accesses like .myvar are extracted (for base, toUpper, etc.)
+func extractArgVariable(args []parse.Node, cycle int, argIndex int, treatStringLiteralsAsVarNames bool) ([]string, error) {
 	var result []string
 	if len(args) > argIndex {
 		item := args[argIndex]
 		if item.Type() == parse.NodeString {
-			stringNode := item.(*parse.StringNode)
-			result = append(result, stringNode.Text)
+			if treatStringLiteralsAsVarNames {
+				// String literals are variable names to look up (e.g., json "myvar")
+				stringNode := item.(*parse.StringNode)
+				result = append(result, stringNode.Text)
+			}
+			// else: string literals are just data, skip them
 		} else {
-			// For complex expressions, we need to recursively extract variables
+			// For complex expressions, recursively extract variables
 			parser := NewParser(globalRegistry)
 			sonResult, err := parser.getFieldFromNode(item, cycle)
 			if err != nil {
@@ -26,24 +33,29 @@ func extractStringArgVariable(args []parse.Node, cycle int, argIndex int) ([]str
 	return result, nil
 }
 
-// extractStringArgVariableWithDefaults extracts variables with default values
+// extractArgVariableWithDefaults extracts variables with default values
 // argIndex: the index of the variable name argument (usually 1, after function name)
-// defaultArgIndex: the index of the default value argument (usually 2)
-func extractStringArgVariableWithDefaults(args []parse.Node, cycle int, argIndex int, defaultArgIndex int) ([]VariableInfo, error) {
+// defaultArgIndex: the index of the default value argument (usually 2, -1 for no default)
+// treatStringLiteralsAsVarNames: if true, string literals are treated as variable names
+func extractArgVariableWithDefaults(args []parse.Node, cycle int, argIndex int, defaultArgIndex int, treatStringLiteralsAsVarNames bool) ([]VariableInfo, error) {
 	var result []VariableInfo
 	if len(args) > argIndex {
 		item := args[argIndex]
 		if item.Type() == parse.NodeString {
-			stringNode := item.(*parse.StringNode)
-			varInfo := VariableInfo{
-				Name: stringNode.Text,
+			if treatStringLiteralsAsVarNames {
+				// String literals are variable names to look up
+				stringNode := item.(*parse.StringNode)
+				varInfo := VariableInfo{
+					Name: stringNode.Text,
+				}
+				// Check for default value
+				if defaultArgIndex > 0 && len(args) > defaultArgIndex && args[defaultArgIndex].Type() == parse.NodeString {
+					defaultValueNode := args[defaultArgIndex].(*parse.StringNode)
+					varInfo.DefaultValue = defaultValueNode.Text
+				}
+				result = append(result, varInfo)
 			}
-			// Check for default value
-			if defaultArgIndex > 0 && len(args) > defaultArgIndex && args[defaultArgIndex].Type() == parse.NodeString {
-				defaultValueNode := args[defaultArgIndex].(*parse.StringNode)
-				varInfo.DefaultValue = defaultValueNode.Text
-			}
-			result = append(result, varInfo)
+			// else: string literals are just data, skip them
 		} else {
 			// For complex expressions, extract variable names without defaults
 			parser := NewParser(globalRegistry)
@@ -57,6 +69,17 @@ func extractStringArgVariableWithDefaults(args []parse.Node, cycle int, argIndex
 		}
 	}
 	return result, nil
+}
+
+// Legacy wrappers for backward compatibility
+
+// extractStringArgVariable treats string literals as variable names (for json, getv, etc.)
+func extractStringArgVariable(args []parse.Node, cycle int, argIndex int) ([]string, error) {
+	return extractArgVariable(args, cycle, argIndex, true)
+}
+
+func extractStringArgVariableWithDefaults(args []parse.Node, cycle int, argIndex int, defaultArgIndex int) ([]VariableInfo, error) {
+	return extractArgVariableWithDefaults(args, cycle, argIndex, defaultArgIndex, true)
 }
 
 // Global registry instance

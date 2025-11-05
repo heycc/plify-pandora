@@ -73,29 +73,29 @@ func (h *TestHelper) NewParserWithConfdFunctions() *Parser {
 	// Manually register Confd functions for testing
 	// In the actual build, this is done by init() in functions_confd.go
 
-	// Pure utility functions (no variable extraction)
+	// String transformation functions (extract variables from first argument)
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "base",
 		Description:           "Returns the last element of path",
 		Handler:               func(s string) string { return "" },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "split",
 		Description:           "Splits a string into substrings separated by separator",
 		Handler:               func(s, sep string) []string { return []string{} },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "dir",
 		Description:           "Returns all but the last element of path",
 		Handler:               func(s string) string { return "" },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
@@ -126,64 +126,64 @@ func (h *TestHelper) NewParserWithConfdFunctions() *Parser {
 		Name:                  "toUpper",
 		Description:           "Converts string to uppercase",
 		Handler:               func(s string) string { return "" },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "toLower",
 		Description:           "Converts string to lowercase",
 		Handler:               func(s string) string { return "" },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "replace",
 		Description:           "Replaces old string with new string",
 		Handler:               func(s, old, new string, n int) string { return "" },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "contains",
 		Description:           "Checks if string contains substring",
 		Handler:               func(s, substr string) bool { return false },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "base64Encode",
 		Description:           "Base64 encodes a string",
 		Handler:               func(data string) string { return "" },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "base64Decode",
 		Description:           "Base64 decodes a string",
 		Handler:               func(data string) (string, error) { return "", nil },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "trimSuffix",
 		Description:           "Trims suffix from string",
 		Handler:               func(s, suffix string) string { return "" },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "parseBool",
 		Description:           "Parses string to boolean",
 		Handler:               func(str string) (bool, error) { return false, nil },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
@@ -198,48 +198,48 @@ func (h *TestHelper) NewParserWithConfdFunctions() *Parser {
 		Name:                  "add",
 		Description:           "Adds two numbers",
 		Handler:               func(a, b int) int { return 0 },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "sub",
 		Description:           "Subtracts two numbers",
 		Handler:               func(a, b int) int { return 0 },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "div",
 		Description:           "Divides two numbers",
 		Handler:               func(a, b int) int { return 0 },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "mod",
 		Description:           "Modulo operation on two numbers",
 		Handler:               func(a, b int) int { return 0 },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "mul",
 		Description:           "Multiplies two numbers",
 		Handler:               func(a, b int) int { return 0 },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "seq",
 		Description:           "Generates sequence of integers",
 		Handler:               func(first, last int) []int { return []int{} },
-		Extractor:             extractNoVariablesTest,
-		ExtractorWithDefaults: extractNoVariablesInfoTest,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	registry.RegisterFunction(&FunctionDefinition{
@@ -292,3 +292,7 @@ func extractNoVariablesTest(args []parse.Node, cycle int) ([]string, error) {
 func extractNoVariablesInfoTest(args []parse.Node, cycle int) ([]VariableInfo, error) {
 	return nil, nil
 }
+
+// extractFirstArgVariable and extractFirstArgVariableInfo are defined in functions_confd.go
+// They use extractArgVariable with treatStringLiteralsAsVarNames=false
+// This means they extract field accesses like .myvar but skip string literals like "path"

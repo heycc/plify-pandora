@@ -10,8 +10,8 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"time"
 	"text/template/parse"
+	"time"
 )
 
 func init() {
@@ -24,22 +24,22 @@ func init() {
 func registerConfdFunctions() {
 	registry := GetGlobalRegistry()
 
-	// base - Base function (path.Base) - pure utility, no variable extraction
+	// base - Base function (path.Base) - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "base",
 		Description:           "Returns the last element of path",
 		Handler:               baseMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// split - Split function (strings.Split) - pure utility, no variable extraction
+	// split - Split function (strings.Split) - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "split",
 		Description:           "Splits a string into substrings separated by separator",
 		Handler:               splitMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	// json - Parse JSON object - already handled in functions_custom.go
@@ -61,13 +61,13 @@ func registerConfdFunctions() {
 		ExtractorWithDefaults: extractSingleStringArgVariableInfo,
 	})
 
-	// dir - Directory function (path.Dir) - pure utility, no variable extraction
+	// dir - Directory function (path.Dir) - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "dir",
 		Description:           "Returns all but the last element of path",
 		Handler:               dirMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	// map - Create map from key-value pairs - pure utility, no variable extraction
@@ -97,76 +97,76 @@ func registerConfdFunctions() {
 		ExtractorWithDefaults: extractNoVariablesInfo,
 	})
 
-	// toUpper - Convert to uppercase - pure utility, no variable extraction
+	// toUpper - Convert to uppercase - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "toUpper",
 		Description:           "Converts string to uppercase",
 		Handler:               toUpperMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// toLower - Convert to lowercase - pure utility, no variable extraction
+	// toLower - Convert to lowercase - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "toLower",
 		Description:           "Converts string to lowercase",
 		Handler:               toLowerMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// replace - Replace substrings - pure utility, no variable extraction
+	// replace - Replace substrings - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "replace",
 		Description:           "Replaces old string with new string",
 		Handler:               replaceMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// contains - Check if string contains substring - pure utility, no variable extraction
+	// contains - Check if string contains substring - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "contains",
 		Description:           "Checks if string contains substring",
 		Handler:               containsMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// base64Encode - Base64 encode - pure utility, no variable extraction
+	// base64Encode - Base64 encode - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "base64Encode",
 		Description:           "Base64 encodes a string",
 		Handler:               base64EncodeMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// base64Decode - Base64 decode - pure utility, no variable extraction
+	// base64Decode - Base64 decode - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "base64Decode",
 		Description:           "Base64 decodes a string",
 		Handler:               base64DecodeMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// trimSuffix - Trim suffix - pure utility, no variable extraction
+	// trimSuffix - Trim suffix - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "trimSuffix",
 		Description:           "Trims suffix from string",
 		Handler:               trimSuffixMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// parseBool - Parse boolean - pure utility, no variable extraction
+	// parseBool - Parse boolean - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "parseBool",
 		Description:           "Parses string to boolean",
 		Handler:               parseBoolMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	// reverse - Reverse array - pure utility, no variable extraction
@@ -178,58 +178,58 @@ func registerConfdFunctions() {
 		ExtractorWithDefaults: extractNoVariablesInfo,
 	})
 
-	// add - Add numbers - pure utility, no variable extraction
+	// add - Add numbers - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "add",
 		Description:           "Adds two numbers",
 		Handler:               addMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// sub - Subtract numbers - pure utility, no variable extraction
+	// sub - Subtract numbers - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "sub",
 		Description:           "Subtracts two numbers",
 		Handler:               subMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// div - Divide numbers - pure utility, no variable extraction
+	// div - Divide numbers - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "div",
 		Description:           "Divides two numbers",
 		Handler:               divMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// mod - Modulo operation - pure utility, no variable extraction
+	// mod - Modulo operation - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "mod",
 		Description:           "Modulo operation on two numbers",
 		Handler:               modMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// mul - Multiply numbers - pure utility, no variable extraction
+	// mul - Multiply numbers - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "mul",
 		Description:           "Multiplies two numbers",
 		Handler:               mulMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// seq - Generate sequence - pure utility, no variable extraction
+	// seq - Generate sequence - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "seq",
 		Description:           "Generates sequence of integers",
 		Handler:               seqMinimalHandler,
-		Extractor:             extractNoVariables,
-		ExtractorWithDefaults: extractNoVariablesInfo,
+		Extractor:             extractFirstArgVariable,
+		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
 	// atoi - String to integer - pure utility, no variable extraction
@@ -544,32 +544,43 @@ func extractSingleStringArgVariableInfo(args []parse.Node, cycle int) ([]Variabl
 	return extractStringArgVariableWithDefaults(args, cycle, 1, -1)
 }
 
+// Extract variables from first argument (for transformation functions like base, toUpper, etc.)
+// These functions operate on their first argument, which may be a variable reference
+// Unlike extractStringArgVariable, this does NOT treat string literals as variable names
+func extractFirstArgVariable(args []parse.Node, cycle int) ([]string, error) {
+	return extractArgVariable(args, cycle, 1, false)
+}
+
+func extractFirstArgVariableInfo(args []parse.Node, cycle int) ([]VariableInfo, error) {
+	return extractArgVariableWithDefaults(args, cycle, 1, -1, false)
+}
+
 // CreateConfdRenderFuncMap creates function map with actual variable values for rendering Confd functions
 func CreateConfdRenderFuncMap(variables map[string]interface{}) map[string]interface{} {
 	return map[string]interface{}{
-		"base":        baseRenderHandler(variables),
-		"split":       splitRenderHandler(variables),
-		"json":        jsonConfdRenderHandler(variables),
-		"jsonArray":   jsonArrayConfdRenderHandler(variables),
-		"dir":         dirRenderHandler(variables),
-		"map":         mapRenderHandler(variables),
-		"join":        joinRenderHandler(variables),
-		"datetime":    datetimeRenderHandler(variables),
-		"toUpper":     toUpperRenderHandler(variables),
-		"toLower":     toLowerRenderHandler(variables),
-		"replace":     replaceRenderHandler(variables),
-		"contains":    containsRenderHandler(variables),
+		"base":         baseRenderHandler(variables),
+		"split":        splitRenderHandler(variables),
+		"json":         jsonConfdRenderHandler(variables),
+		"jsonArray":    jsonArrayConfdRenderHandler(variables),
+		"dir":          dirRenderHandler(variables),
+		"map":          mapRenderHandler(variables),
+		"join":         joinRenderHandler(variables),
+		"datetime":     datetimeRenderHandler(variables),
+		"toUpper":      toUpperRenderHandler(variables),
+		"toLower":      toLowerRenderHandler(variables),
+		"replace":      replaceRenderHandler(variables),
+		"contains":     containsRenderHandler(variables),
 		"base64Encode": base64EncodeRenderHandler(variables),
 		"base64Decode": base64DecodeRenderHandler(variables),
-		"trimSuffix":  trimSuffixRenderHandler(variables),
-		"parseBool":   parseBoolRenderHandler(variables),
-		"reverse":     reverseRenderHandler(variables),
-		"add":         addRenderHandler(variables),
-		"sub":         subRenderHandler(variables),
-		"div":         divRenderHandler(variables),
-		"mod":         modRenderHandler(variables),
-		"mul":         mulRenderHandler(variables),
-		"seq":         seqRenderHandler(variables),
-		"atoi":        atoiRenderHandler(variables),
+		"trimSuffix":   trimSuffixRenderHandler(variables),
+		"parseBool":    parseBoolRenderHandler(variables),
+		"reverse":      reverseRenderHandler(variables),
+		"add":          addRenderHandler(variables),
+		"sub":          subRenderHandler(variables),
+		"div":          divRenderHandler(variables),
+		"mod":          modRenderHandler(variables),
+		"mul":          mulRenderHandler(variables),
+		"seq":          seqRenderHandler(variables),
+		"atoi":         atoiRenderHandler(variables),
 	}
 }

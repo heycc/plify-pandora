@@ -244,7 +244,9 @@ func TestEndToEnd_ConfdFunctions(t *testing.T) {
 			name:     "mixed standard fields and Confd functions",
 			template: `Hello {{.Name}}, your file is {{base .FilePath}} and total is {{add .Count 5}}`,
 			expectedVars: []VariableInfo{
-				{Name: "Name"}, // Only standard Go template fields are extracted, not Confd function arguments
+				{Name: "Name"},     // Standard Go template field
+				{Name: "FilePath"}, // Extracted by base function
+				{Name: "Count"},    // Extracted by add function
 			},
 			providedValues: map[string]interface{}{
 				"Name":     "Bob",
@@ -300,24 +302,69 @@ func TestConfdFunctions_VariableExtraction(t *testing.T) {
 			expectedVars: []VariableInfo{{Name: "items"}},
 		},
 		{
-			name:         "pure utility functions extract no variables",
+			name:         "pure utility functions with literals extract no variables",
+			template:     `{{join (split "a,b" ",") "-"}} {{map "key" "value"}}`,
+			expectedVars: nil,
+		},
+		{
+			name:         "string transformation functions with literals extract no variables",
 			template:     `{{base "path"}} {{split "a,b" ","}} {{dir "path"}}`,
 			expectedVars: nil,
 		},
 		{
-			name:         "math functions extract no variables",
-			template:     `{{add 1 2}} {{sub 5 3}} {{mul 2 3}}`,
+			name:         "case transformation functions with literals extract no variables",
+			template:     `{{toUpper "hello"}} {{toLower "WORLD"}}`,
 			expectedVars: nil,
 		},
 		{
-			name:         "string functions extract no variables",
-			template:     `{{toUpper "hello"}} {{toLower "WORLD"}} {{contains "test" "es"}}`,
+			name:         "string functions with literals extract no variables",
+			template:     `{{contains "test" "es"}} {{replace "hello" "l" "L" -1}} {{trimSuffix "file.txt" ".txt"}}`,
 			expectedVars: nil,
 		},
 		{
-			name:         "mixed json and utility functions",
+			name:         "encoding functions with literals extract no variables",
+			template:     `{{base64Encode "hello"}} {{base64Decode "aGVsbG8="}}`,
+			expectedVars: nil,
+		},
+		{
+			name:         "math functions with literals extract no variables",
+			template:     `{{add 1 2}} {{sub 5 3}} {{mul 2 3}} {{div 10 2}} {{mod 7 3}}`,
+			expectedVars: nil,
+		},
+		{
+			name:         "seq function with literals extracts no variables",
+			template:     `{{range seq 1 5}}{{.}}{{end}}`,
+			expectedVars: nil,
+		},
+		{
+			name:         "string transformation functions with field access extract them",
+			template:     `{{base .filepath}} {{dir .filepath}} {{toUpper .name}}`,
+			expectedVars: []VariableInfo{{Name: "filepath"}, {Name: "filepath"}, {Name: "name"}},
+		},
+		{
+			name:         "math functions with field access extract them",
+			template:     `{{add .count 5}} {{sub .total 10}} {{mul .value 2}}`,
+			expectedVars: []VariableInfo{{Name: "count"}, {Name: "total"}, {Name: "value"}},
+		},
+		{
+			name:         "string functions with field access extract them",
+			template:     `{{toLower .title}} {{contains .text "search"}} {{replace .content "old" "new" -1}}`,
+			expectedVars: []VariableInfo{{Name: "title"}, {Name: "text"}, {Name: "content"}},
+		},
+		{
+			name:         "parseBool function with field access extracts variable",
+			template:     `{{parseBool .enabled}}`,
+			expectedVars: []VariableInfo{{Name: "enabled"}},
+		},
+		{
+			name:         "base64 functions with field access extract variables",
+			template:     `{{base64Encode .data}} {{base64Decode .encoded}}`,
+			expectedVars: []VariableInfo{{Name: "data"}, {Name: "encoded"}},
+		},
+		{
+			name:         "mixed json and utility with literals",
 			template:     `{{json "data"}} {{base "path"}}`,
-			expectedVars: []VariableInfo{{Name: "data"}},
+			expectedVars: []VariableInfo{{Name: "data"}}, // base with literal doesn't extract
 		},
 	}
 
