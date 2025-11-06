@@ -1,5 +1,5 @@
-//go:build !js
-// +build !js
+//go:build !js && confd
+// +build !js,confd
 
 package main
 
@@ -10,12 +10,22 @@ import (
 	"text/template"
 )
 
+// createConfdParser creates a parser with Confd-style functions enabled for testing
+// Uses the actual production function registration from functions_confd.go
+func createConfdParser() *Parser {
+	// Register Confd functions in the global registry
+	// Note: functions_confd.go has init() that calls this, but that file has 'js && confd' tag
+	// so it won't be included in tests (!js && confd). We call it manually here.
+	registerConfdFunctions()
+	return NewParser(GetGlobalRegistry())
+}
+
 // TestEndToEnd_ConfdFunctions tests the complete workflow with Confd-style functions:
 // 1. Extract variables from template
 // 2. Provide values for those variables
 // 3. Render the template with those values
 func TestEndToEnd_ConfdFunctions(t *testing.T) {
-	parserConfd := NewTestHelper().NewParserWithConfdFunctions()
+	parserConfd := createConfdParser()
 
 	tests := []struct {
 		name           string
@@ -33,11 +43,25 @@ func TestEndToEnd_ConfdFunctions(t *testing.T) {
 			expectedOutput: "Path: file.txt",
 		},
 		{
+			name:           "base function with variable",
+			template:       `Path: {{base .path}}`,
+			expectedVars:   []VariableInfo{{Name: "path"}},
+			providedValues: map[string]interface{}{"path": "/foo/bar/abc.txt"},
+			expectedOutput: "Path: abc.txt",
+		},
+		{
 			name:           "split function",
 			template:       `{{range split "a,b,c" ","}}{{.}} {{end}}`,
 			expectedVars:   nil,
 			providedValues: map[string]interface{}{},
 			expectedOutput: "a b c ",
+		},
+		{
+			name:           "split function with variable",
+			template:       `{{range split .csv ","}}{{.}} {{end}}`,
+			expectedVars:   []VariableInfo{{Name: "csv"}},
+			providedValues: map[string]interface{}{"csv": "x,y,z"},
+			expectedOutput: "x y z ",
 		},
 		{
 			name:           "dir function",
@@ -284,7 +308,7 @@ func TestEndToEnd_ConfdFunctions(t *testing.T) {
 
 // TestConfdFunctions_VariableExtraction tests that Confd functions correctly extract variables
 func TestConfdFunctions_VariableExtraction(t *testing.T) {
-	parserConfd := NewTestHelper().NewParserWithConfdFunctions()
+	parserConfd := createConfdParser()
 
 	tests := []struct {
 		name         string
@@ -384,9 +408,10 @@ func TestConfdFunctions_VariableExtraction(t *testing.T) {
 // Helper functions for rendering templates in tests
 
 // renderTemplateWithConfdFunctions renders a template with Confd functions enabled
+// Uses the actual production implementation from functions_confd_core.go
 func renderTemplateWithConfdFunctions(templateContent string, variables map[string]interface{}) (string, error) {
-	// Use the actual render handlers from functions_confd.go
-	funcMap := CreateConfdRenderFuncMap(variables)
+	// Use the actual production implementation - this is what we're testing!
+	funcMap := GetConfdRenderFuncMap(variables)
 
 	tmpl, err := template.New("test").Funcs(funcMap).Parse(templateContent)
 	if err != nil {

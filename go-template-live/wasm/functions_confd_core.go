@@ -1,26 +1,24 @@
-//go:build js && confd
-// +build js,confd
+//go:build confd
+// +build confd
+
+// This file contains the core implementations of Confd-style functions
+// Tag: confd (works for both js && confd WASM builds and !js && confd tests)
 
 package main
 
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"path"
 	"strconv"
 	"strings"
+	"text/template"
 	"text/template/parse"
 	"time"
 )
 
-func init() {
-	// Register Confd-style functions on initialization
-	// This only happens when building with the "confd" tag
-	registerConfdFunctions()
-}
-
 // registerConfdFunctions registers all Confd-style template functions
+// This is called by both WASM (via init in functions_confd.go) and tests
 func registerConfdFunctions() {
 	registry := GetGlobalRegistry()
 
@@ -42,8 +40,7 @@ func registerConfdFunctions() {
 		ExtractorWithDefaults: extractFirstArgVariableInfo,
 	})
 
-	// json - Parse JSON object - already handled in functions_custom.go
-	// This is just a duplicate registration, but we'll keep it for completeness
+	// json - Parse JSON object
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "json",
 		Description:           "Parse JSON variable and return as map",
@@ -52,7 +49,7 @@ func registerConfdFunctions() {
 		ExtractorWithDefaults: extractSingleStringArgVariableInfo,
 	})
 
-	// jsonArray - Parse JSON array - already handled in functions_custom.go
+	// jsonArray - Parse JSON array
 	registry.RegisterFunction(&FunctionDefinition{
 		Name:                  "jsonArray",
 		Description:           "Parse JSON variable and return as array",
@@ -243,290 +240,32 @@ func registerConfdFunctions() {
 }
 
 // Minimal handlers for parsing (don't need actual variable values)
-func baseMinimalHandler(s string) string {
-	return ""
-}
+func baseMinimalHandler(s string) string                                      { return "" }
+func splitMinimalHandler(s, sep string) []string                              { return []string{} }
+func jsonConfdMinimalHandler(data string) (map[string]interface{}, error)     { return nil, nil }
+func jsonArrayConfdMinimalHandler(data string) ([]interface{}, error)         { return nil, nil }
+func dirMinimalHandler(s string) string                                       { return "" }
+func mapMinimalHandler(values ...interface{}) (map[string]interface{}, error) { return nil, nil }
+func joinMinimalHandler(elems []string, sep string) string                    { return "" }
+func datetimeMinimalHandler() time.Time                                       { return time.Time{} }
+func toUpperMinimalHandler(s string) string                                   { return "" }
+func toLowerMinimalHandler(s string) string                                   { return "" }
+func replaceMinimalHandler(s, old, new string, n int) string                  { return "" }
+func containsMinimalHandler(s, substr string) bool                            { return false }
+func base64EncodeMinimalHandler(data string) string                           { return "" }
+func base64DecodeMinimalHandler(data string) (string, error)                  { return "", nil }
+func trimSuffixMinimalHandler(s, suffix string) string                        { return "" }
+func parseBoolMinimalHandler(str string) (bool, error)                        { return false, nil }
+func reverseMinimalHandler(values interface{}) interface{}                    { return nil }
+func addMinimalHandler(a, b int) int                                          { return 0 }
+func subMinimalHandler(a, b int) int                                          { return 0 }
+func divMinimalHandler(a, b int) int                                          { return 0 }
+func modMinimalHandler(a, b int) int                                          { return 0 }
+func mulMinimalHandler(a, b int) int                                          { return 0 }
+func seqMinimalHandler(first, last int) []int                                 { return []int{} }
+func atoiMinimalHandler(s string) (int, error)                                { return 0, nil }
 
-func splitMinimalHandler(s, sep string) []string {
-	return []string{}
-}
-
-func jsonConfdMinimalHandler(data string) (map[string]interface{}, error) {
-	return nil, nil
-}
-
-func jsonArrayConfdMinimalHandler(data string) ([]interface{}, error) {
-	return nil, nil
-}
-
-func dirMinimalHandler(s string) string {
-	return ""
-}
-
-func mapMinimalHandler(values ...interface{}) (map[string]interface{}, error) {
-	return nil, nil
-}
-
-func joinMinimalHandler(elems []string, sep string) string {
-	return ""
-}
-
-func datetimeMinimalHandler() time.Time {
-	return time.Time{}
-}
-
-func toUpperMinimalHandler(s string) string {
-	return ""
-}
-
-func toLowerMinimalHandler(s string) string {
-	return ""
-}
-
-func replaceMinimalHandler(s, old, new string, n int) string {
-	return ""
-}
-
-func containsMinimalHandler(s, substr string) bool {
-	return false
-}
-
-func base64EncodeMinimalHandler(data string) string {
-	return ""
-}
-
-func base64DecodeMinimalHandler(data string) (string, error) {
-	return "", nil
-}
-
-func trimSuffixMinimalHandler(s, suffix string) string {
-	return ""
-}
-
-func parseBoolMinimalHandler(str string) (bool, error) {
-	return false, nil
-}
-
-func reverseMinimalHandler(values interface{}) interface{} {
-	return nil
-}
-
-func addMinimalHandler(a, b int) int {
-	return 0
-}
-
-func subMinimalHandler(a, b int) int {
-	return 0
-}
-
-func divMinimalHandler(a, b int) int {
-	return 0
-}
-
-func modMinimalHandler(a, b int) int {
-	return 0
-}
-
-func mulMinimalHandler(a, b int) int {
-	return 0
-}
-
-func seqMinimalHandler(first, last int) []int {
-	return []int{}
-}
-
-func atoiMinimalHandler(s string) (int, error) {
-	return 0, nil
-}
-
-// Actual handlers for rendering (use variable values)
-func baseRenderHandler(_ map[string]interface{}) func(s string) string {
-	return func(s string) string {
-		return path.Base(s)
-	}
-}
-
-func splitRenderHandler(_ map[string]interface{}) func(s, sep string) []string {
-	return func(s, sep string) []string {
-		return strings.Split(s, sep)
-	}
-}
-
-func jsonConfdRenderHandler(variables map[string]interface{}) func(key string) (map[string]interface{}, error) {
-	return func(key string) (map[string]interface{}, error) {
-		if val, exists := variables[key]; exists {
-			if strVal, ok := val.(string); ok {
-				var result map[string]interface{}
-				err := json.Unmarshal([]byte(strVal), &result)
-				return result, err
-			}
-		}
-		return nil, errors.New("key not found")
-	}
-}
-
-func jsonArrayConfdRenderHandler(variables map[string]interface{}) func(key string) ([]interface{}, error) {
-	return func(key string) ([]interface{}, error) {
-		if val, exists := variables[key]; exists {
-			if strVal, ok := val.(string); ok {
-				var result []interface{}
-				err := json.Unmarshal([]byte(strVal), &result)
-				return result, err
-			}
-		}
-		return nil, errors.New("key not found")
-	}
-}
-
-func dirRenderHandler(_ map[string]interface{}) func(s string) string {
-	return func(s string) string {
-		return path.Dir(s)
-	}
-}
-
-func mapRenderHandler(_ map[string]interface{}) func(values ...interface{}) (map[string]interface{}, error) {
-	return func(values ...interface{}) (map[string]interface{}, error) {
-		if len(values)%2 != 0 {
-			return nil, errors.New("invalid map call")
-		}
-		dict := make(map[string]interface{}, len(values)/2)
-		for i := 0; i < len(values); i += 2 {
-			key, ok := values[i].(string)
-			if !ok {
-				return nil, errors.New("map keys must be strings")
-			}
-			dict[key] = values[i+1]
-		}
-		return dict, nil
-	}
-}
-
-func joinRenderHandler(_ map[string]interface{}) func(elems []string, sep string) string {
-	return func(elems []string, sep string) string {
-		return strings.Join(elems, sep)
-	}
-}
-
-func datetimeRenderHandler(_ map[string]interface{}) func() time.Time {
-	return func() time.Time {
-		return time.Now()
-	}
-}
-
-func toUpperRenderHandler(_ map[string]interface{}) func(s string) string {
-	return func(s string) string {
-		return strings.ToUpper(s)
-	}
-}
-
-func toLowerRenderHandler(_ map[string]interface{}) func(s string) string {
-	return func(s string) string {
-		return strings.ToLower(s)
-	}
-}
-
-func replaceRenderHandler(_ map[string]interface{}) func(s, old, new string, n int) string {
-	return func(s, old, new string, n int) string {
-		return strings.Replace(s, old, new, n)
-	}
-}
-
-func containsRenderHandler(_ map[string]interface{}) func(s, substr string) bool {
-	return func(s, substr string) bool {
-		return strings.Contains(s, substr)
-	}
-}
-
-func base64EncodeRenderHandler(_ map[string]interface{}) func(data string) string {
-	return func(data string) string {
-		return base64.StdEncoding.EncodeToString([]byte(data))
-	}
-}
-
-func base64DecodeRenderHandler(_ map[string]interface{}) func(data string) (string, error) {
-	return func(data string) (string, error) {
-		s, err := base64.StdEncoding.DecodeString(data)
-		return string(s), err
-	}
-}
-
-func trimSuffixRenderHandler(_ map[string]interface{}) func(s, suffix string) string {
-	return func(s, suffix string) string {
-		return strings.TrimSuffix(s, suffix)
-	}
-}
-
-func parseBoolRenderHandler(_ map[string]interface{}) func(str string) (bool, error) {
-	return func(str string) (bool, error) {
-		return strconv.ParseBool(str)
-	}
-}
-
-func reverseRenderHandler(_ map[string]interface{}) func(values interface{}) interface{} {
-	return func(values interface{}) interface{} {
-		switch v := values.(type) {
-		case []string:
-			for left, right := 0, len(v)-1; left < right; left, right = left+1, right-1 {
-				v[left], v[right] = v[right], v[left]
-			}
-			return v
-		case []interface{}:
-			for left, right := 0, len(v)-1; left < right; left, right = left+1, right-1 {
-				v[left], v[right] = v[right], v[left]
-			}
-			return v
-		}
-		return values
-	}
-}
-
-func addRenderHandler(_ map[string]interface{}) func(a, b int) int {
-	return func(a, b int) int {
-		return a + b
-	}
-}
-
-func subRenderHandler(_ map[string]interface{}) func(a, b int) int {
-	return func(a, b int) int {
-		return a - b
-	}
-}
-
-func divRenderHandler(_ map[string]interface{}) func(a, b int) int {
-	return func(a, b int) int {
-		return a / b
-	}
-}
-
-func modRenderHandler(_ map[string]interface{}) func(a, b int) int {
-	return func(a, b int) int {
-		return a % b
-	}
-}
-
-func mulRenderHandler(_ map[string]interface{}) func(a, b int) int {
-	return func(a, b int) int {
-		return a * b
-	}
-}
-
-func seqRenderHandler(_ map[string]interface{}) func(first, last int) []int {
-	return func(first, last int) []int {
-		var arr []int
-		for i := first; i <= last; i++ {
-			arr = append(arr, i)
-		}
-		return arr
-	}
-}
-
-func atoiRenderHandler(_ map[string]interface{}) func(s string) (int, error) {
-	return func(s string) (int, error) {
-		return strconv.Atoi(s)
-	}
-}
-
-// Variable extractors
+// Variable extractors (used during template parsing)
 func extractNoVariables(args []parse.Node, cycle int) ([]string, error) {
 	return []string{}, nil
 }
@@ -555,32 +294,87 @@ func extractFirstArgVariableInfo(args []parse.Node, cycle int) ([]VariableInfo, 
 	return extractArgVariableWithDefaults(args, cycle, 1, -1, false)
 }
 
-// CreateRenderFuncMap creates function map with actual variable values for rendering Confd functions
-func CreateRenderFuncMap(variables map[string]interface{}) map[string]interface{} {
-	return map[string]interface{}{
-		"base":         baseRenderHandler(variables),
-		"split":        splitRenderHandler(variables),
-		"json":         jsonConfdRenderHandler(variables),
-		"jsonArray":    jsonArrayConfdRenderHandler(variables),
-		"dir":          dirRenderHandler(variables),
-		"map":          mapRenderHandler(variables),
-		"join":         joinRenderHandler(variables),
-		"datetime":     datetimeRenderHandler(variables),
-		"toUpper":      toUpperRenderHandler(variables),
-		"toLower":      toLowerRenderHandler(variables),
-		"replace":      replaceRenderHandler(variables),
-		"contains":     containsRenderHandler(variables),
-		"base64Encode": base64EncodeRenderHandler(variables),
-		"base64Decode": base64DecodeRenderHandler(variables),
-		"trimSuffix":   trimSuffixRenderHandler(variables),
-		"parseBool":    parseBoolRenderHandler(variables),
-		"reverse":      reverseRenderHandler(variables),
-		"add":          addRenderHandler(variables),
-		"sub":          subRenderHandler(variables),
-		"div":          divRenderHandler(variables),
-		"mod":          modRenderHandler(variables),
-		"mul":          mulRenderHandler(variables),
-		"seq":          seqRenderHandler(variables),
-		"atoi":         atoiRenderHandler(variables),
+// GetConfdRenderFuncMap returns a function map with all Confd-style functions for rendering
+// This is used by both the WASM build (via CreateRenderFuncMap) and tests
+func GetConfdRenderFuncMap(variables map[string]interface{}) template.FuncMap {
+	return template.FuncMap{
+		"base":         func(s string) string { return path.Base(s) },
+		"split":        func(s, sep string) []string { return strings.Split(s, sep) },
+		"dir":          func(s string) string { return path.Dir(s) },
+		"join":         func(elems []string, sep string) string { return strings.Join(elems, sep) },
+		"datetime":     func() time.Time { return time.Now() },
+		"toUpper":      func(s string) string { return strings.ToUpper(s) },
+		"toLower":      func(s string) string { return strings.ToLower(s) },
+		"replace":      func(s, old, new string, n int) string { return strings.Replace(s, old, new, n) },
+		"contains":     func(s, substr string) bool { return strings.Contains(s, substr) },
+		"base64Encode": func(data string) string { return base64.StdEncoding.EncodeToString([]byte(data)) },
+		"base64Decode": func(data string) (string, error) {
+			s, err := base64.StdEncoding.DecodeString(data)
+			return string(s), err
+		},
+		"trimSuffix": func(s, suffix string) string { return strings.TrimSuffix(s, suffix) },
+		"parseBool":  func(str string) (bool, error) { return strconv.ParseBool(str) },
+		"add":        func(a, b int) int { return a + b },
+		"sub":        func(a, b int) int { return a - b },
+		"div":        func(a, b int) int { return a / b },
+		"mod":        func(a, b int) int { return a % b },
+		"mul":        func(a, b int) int { return a * b },
+		"seq": func(first, last int) []int {
+			var result []int
+			for i := first; i <= last; i++ {
+				result = append(result, i)
+			}
+			return result
+		},
+		"atoi": func(s string) (int, error) { return strconv.Atoi(s) },
+		"map": func(values ...interface{}) (map[string]interface{}, error) {
+			dict := make(map[string]interface{}, len(values)/2)
+			for i := 0; i < len(values); i += 2 {
+				key, ok := values[i].(string)
+				if !ok {
+					return nil, nil
+				}
+				if i+1 < len(values) {
+					dict[key] = values[i+1]
+				}
+			}
+			return dict, nil
+		},
+		"reverse": func(values interface{}) interface{} {
+			switch v := values.(type) {
+			case []string:
+				for left, right := 0, len(v)-1; left < right; left, right = left+1, right-1 {
+					v[left], v[right] = v[right], v[left]
+				}
+				return v
+			case []interface{}:
+				for left, right := 0, len(v)-1; left < right; left, right = left+1, right-1 {
+					v[left], v[right] = v[right], v[left]
+				}
+				return v
+			}
+			return values
+		},
+		// JSON functions that look up variables
+		"json": func(key string) (map[string]interface{}, error) {
+			if val, ok := variables[key]; ok {
+				if str, ok := val.(string); ok {
+					var result map[string]interface{}
+					err := json.Unmarshal([]byte(str), &result)
+					return result, err
+				}
+			}
+			return nil, nil
+		},
+		"jsonArray": func(key string) ([]interface{}, error) {
+			if val, ok := variables[key]; ok {
+				if str, ok := val.(string); ok {
+					var result []interface{}
+					err := json.Unmarshal([]byte(str), &result)
+					return result, err
+				}
+			}
+			return nil, nil
+		},
 	}
 }
