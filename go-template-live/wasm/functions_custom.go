@@ -1,25 +1,20 @@
-//go:build js && custom
-// +build js,custom
+//go:build custom
+// +build custom
+
+// This file contains the core implementations of custom functions
+// Tag: custom (works for both js && custom WASM builds and !js && custom tests)
 
 package main
 
 import (
 	"encoding/json"
 	"fmt"
+	"text/template"
 	"text/template/parse"
 )
 
-// This file contains custom functions inspired by Confd
-// These functions are only included when building WITH the "custom" tag
-// Build with: GOOS=js GOARCH=wasm go build -tags custom -o custom.wasm .
-
-func init() {
-	// Register custom functions on initialization
-	// This only happens when building with the "custom" tag
-	registerCustomFunctions()
-}
-
 // registerCustomFunctions registers all custom template functions
+// This is called by both WASM (via init in main_custom.go) and tests
 func registerCustomFunctions() {
 	registry := GetGlobalRegistry()
 
@@ -171,9 +166,10 @@ func extractGetvVariablesWithDefaults(args []parse.Node, cycle int) ([]VariableI
 	return extractStringArgVariableWithDefaults(args, cycle, 1, 2)
 }
 
-// CreateRenderFuncMap creates function map with actual variable values for rendering
-func CreateRenderFuncMap(variables map[string]interface{}) map[string]interface{} {
-	return map[string]interface{}{
+// GetCustomRenderFuncMap returns a function map with all custom functions for rendering
+// This is used by both the WASM build (via CreateRenderFuncMap) and tests
+func GetCustomRenderFuncMap(variables map[string]interface{}) template.FuncMap {
+	return template.FuncMap{
 		"getv":      getvRenderHandler(variables),
 		"exists":    existsRenderHandler(variables),
 		"get":       getRenderHandler(variables),

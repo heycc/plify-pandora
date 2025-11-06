@@ -1,5 +1,5 @@
-//go:build !js
-// +build !js
+//go:build !js && custom
+// +build !js,custom
 
 package main
 
@@ -373,10 +373,16 @@ func TestNewParser_Pure(t *testing.T) {
 }
 
 func TestParser_ExtractVariables_Pure(t *testing.T) {
-	helper := NewTestHelper()
+	// Create parser with custom functions
+	registryCustom := NewFunctionRegistry()
+	oldRegistry := globalRegistry
+	globalRegistry = registryCustom
+	registerCustomFunctions()
+	globalRegistry = oldRegistry
+	parserCustom := NewParser(registryCustom)
 
-	// Test with custom functions
-	parserCustom := helper.NewParserWithCustomFunctions()
+	// Create parser with official functions (no custom functions)
+	helper := NewTestHelper()
 	parserOfficial := helper.NewParserWithOfficialFunctions()
 
 	tests := []struct {

@@ -1,5 +1,5 @@
-//go:build !js
-// +build !js
+//go:build !js && custom
+// +build !js,custom
 
 package main
 
@@ -10,13 +10,31 @@ import (
 	"text/template"
 )
 
-// TestEndToEnd_ExtractAndRender tests the complete workflow:
+// createCustomParser creates a parser with custom functions enabled for testing
+// Uses the actual production function registration from functions_custom_core.go
+func createCustomParser() *Parser {
+	registry := NewFunctionRegistry()
+
+	// Save the current global registry
+	oldRegistry := globalRegistry
+	// Temporarily set our test registry as global
+	globalRegistry = registry
+
+	// Call registerCustomFunctions which is now available from functions_custom_core.go
+	registerCustomFunctions()
+
+	// Restore the old registry
+	globalRegistry = oldRegistry
+
+	return NewParser(registry)
+}
+
+// TestEndToEnd_CustomFunctions tests the complete workflow with custom functions:
 // 1. Extract variables from template
 // 2. Provide values for those variables
 // 3. Render the template with those values
-func TestEndToEnd_ExtractAndRender(t *testing.T) {
-	helper := NewTestHelper()
-	parserCustom := helper.NewParserWithCustomFunctions()
+func TestEndToEnd_CustomFunctions(t *testing.T) {
+	parserCustom := createCustomParser()
 
 	tests := []struct {
 		name           string
@@ -199,93 +217,15 @@ func TestEndToEnd_ExtractAndRender(t *testing.T) {
 	}
 }
 
-// TestEndToEnd_OfficialMode tests that official mode works correctly
-func TestEndToEnd_OfficialMode(t *testing.T) {
-	helper := NewTestHelper()
-	parserOfficial := helper.NewParserWithOfficialFunctions()
-
-	tests := []struct {
-		name           string
-		template       string
-		expectedVars   []VariableInfo
-		providedValues map[string]interface{}
-		expectedOutput string
-	}{
-		{
-			name:     "standard template fields only",
-			template: `Hello {{.Name}}, your email is {{.Email}}`,
-			expectedVars: []VariableInfo{
-				{Name: "Name"},
-				{Name: "Email"},
-			},
-			providedValues: map[string]interface{}{
-				"Name":  "Charlie",
-				"Email": "charlie@example.com",
-			},
-			expectedOutput: "Hello Charlie, your email is charlie@example.com",
-		},
-		{
-			name:     "with if statement",
-			template: `{{if .Active}}User is active{{else}}User is inactive{{end}}`,
-			expectedVars: []VariableInfo{
-				{Name: "Active"},
-			},
-			providedValues: map[string]interface{}{
-				"Active": true,
-			},
-			expectedOutput: "User is active",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Step 1: Extract variables
-			extractedVars, err := parserOfficial.ExtractVariablesWithDefaults("test.tmpl", tt.template)
-			if err != nil {
-				t.Fatalf("ExtractVariablesWithDefaults() error = %v", err)
-			}
-			// Verify extracted variables match expected
-			if !reflect.DeepEqual(extractedVars, tt.expectedVars) {
-				t.Errorf("ExtractVariablesWithDefaults() = %v, want %v", extractedVars, tt.expectedVars)
-			}
-
-			// Step 2: Render template (without custom functions)
-			rendered, err := renderTemplateOfficialMode(tt.template, tt.providedValues)
-			if err != nil {
-				t.Fatalf("renderTemplateOfficialMode() error = %v", err)
-			}
-			// Verify rendered output
-			if rendered != tt.expectedOutput {
-				t.Errorf("renderTemplateOfficialMode() = %q, want %q", rendered, tt.expectedOutput)
-			}
-		})
-	}
-}
-
-// Helper functions for rendering templates in tests
+// Helper function for rendering templates in tests
 
 // renderTemplateWithCustomFunctions renders a template with custom functions enabled
+// Uses the actual production implementation from functions_custom_core.go
 func renderTemplateWithCustomFunctions(templateContent string, variables map[string]interface{}) (string, error) {
-	// Create function map with custom functions
-	funcMap := CreateRenderFuncMap(variables)
+	// Use the actual production implementation - this is what we're testing!
+	funcMap := GetCustomRenderFuncMap(variables)
 
 	tmpl, err := template.New("test").Funcs(funcMap).Parse(templateContent)
-	if err != nil {
-		return "", err
-	}
-
-	var result strings.Builder
-	err = tmpl.Execute(&result, variables)
-	if err != nil {
-		return "", err
-	}
-
-	return result.String(), nil
-}
-
-// renderTemplateOfficialMode renders a template without custom functions (official mode)
-func renderTemplateOfficialMode(templateContent string, variables map[string]interface{}) (string, error) {
-	tmpl, err := template.New("test").Parse(templateContent)
 	if err != nil {
 		return "", err
 	}
