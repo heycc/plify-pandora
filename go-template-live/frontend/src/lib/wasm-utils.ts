@@ -56,11 +56,12 @@ class WASMUtils {
     console.log(`[WASMUtils] Initialize called with model: ${model}, current: ${this.currentModel}, initialized: ${this.isInitialized}`);
     
     // If model changed, force re-initialization
-    if (this.isInitialized && this.currentModel !== model) {
+    if (this.currentModel !== model) {
       console.log(`[WASMUtils] Model changed from ${this.currentModel} to ${model}, forcing re-initialization`);
       this.isInitialized = false;
       this.initializationPromise = null;
       this.goInstance = null;
+      this.currentModel = model;
     }
 
     if (this.isInitialized && this.currentModel === model) {
@@ -68,12 +69,11 @@ class WASMUtils {
       return;
     }
 
-    if (this.initializationPromise) {
-      console.log(`[WASMUtils] Initialization in progress, waiting...`);
+    if (this.initializationPromise && this.currentModel === model) {
+      console.log(`[WASMUtils] Initialization in progress for ${model}, waiting...`);
       return this.initializationPromise;
     }
 
-    this.currentModel = model;
     this.initializationPromise = this.loadWASM(model);
     await this.initializationPromise;
     this.isInitialized = true;

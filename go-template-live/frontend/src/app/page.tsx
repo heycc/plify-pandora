@@ -15,7 +15,7 @@ interface VariableInfo {
 
 export default function Home() {
   const [wasmLoaded, setWasmLoaded] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<WasmModel>('official');
+  const [selectedModel, setSelectedModel] = useState<WasmModel | null>(null); // Start with null to detect URL loading
 
   // Template states
   const [templateContent, setTemplateContent] = useState(examples.Basic);
@@ -131,37 +131,32 @@ export default function Home() {
   }, [templateContent, variableValues, renderTemplate, wasmLoaded, selectedModel]);
 
   // Load template and variables from URL if present (runs once on mount)
+  // This must run BEFORE WASM initialization to set the correct model
   useEffect(() => {
-    const loadFromUrl = async () => {
-      if (hasSharedTemplateInUrl()) {
-        const sharedData = getTemplateDataFromUrl();
-        if (sharedData) {
-          // Set model first if present
-          if (sharedData.model) {
-            setSelectedModel(sharedData.model);
-          }
-          
-          // Set template first
-          setTemplateContent(sharedData.template);
-          
-          // Extract variables from the template
-          const variables = await extractVariables(sharedData.template);
-          setExtractedVariables(variables);
-          
-          // Prepare variable values: use URL values if present, otherwise use defaults
-          const initialValues: Record<string, string> = {};
-          variables.forEach(variable => {
-            initialValues[variable.name] = 
-              sharedData.variables?.[variable.name] ?? variable.defaultValue ?? '';
-          });
-          setVariableValues(initialValues);
+    if (hasSharedTemplateInUrl()) {
+      const sharedData = getTemplateDataFromUrl();
+      if (sharedData) {
+        console.log('[Page] Loading shared data from URL:', { 
+          model: sharedData.model, 
+          hasVariables: !!sharedData.variables 
+        });
+        
+        // Set model first if present (this will trigger WASM initialization)
+        setSelectedModel(sharedData.model || 'official');
+        
+        // Set template content
+        setTemplateContent(sharedData.template);
+        
+        // If variables are provided in URL, set them directly
+        // Variable extraction will happen after WASM loads
+        if (sharedData.variables) {
+          setVariableValues(sharedData.variables);
         }
       }
-      // Mark URL loading as complete after a brief delay to ensure state is set
-      setTimeout(() => setIsLoadingFromUrl(false), 100);
-    };
-    
-    loadFromUrl();
+    } else {
+      // No URL data, use default model
+      setSelectedModel('official');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount
 
@@ -171,8 +166,8 @@ export default function Home() {
       if ((event.metaKey || event.ctrlKey) && event.key === 's') {
         event.preventDefault(); // Prevent default browser save dialog
         
-        if (!templateContent.trim()) {
-          console.log('Cannot update URL with empty template');
+        if (!templateContent.trim() || !selectedModel) {
+          console.log('Cannot update URL with empty template or no model selected');
           return;
         }
 
@@ -200,18 +195,30 @@ export default function Home() {
 
   // Initialize WASM (re-initialize when model changes)
   useEffect(() => {
+    // Don't initialize until we've determined the model from URL (or default)
+    if (selectedModel === null) {
+      console.log('[Page] Waiting for model to be determined from URL...');
+      return;
+    }
+
     const initializeWASM = async () => {
       try {
+        console.log(`[Page] Initializing WASM with model: ${selectedModel}`);
         setWasmLoaded(false);
         await wasmUtils.initialize(selectedModel);
         setWasmLoaded(true);
         setError(null); // Clear error on success
+        console.log(`[Page] WASM initialized successfully with model: ${selectedModel}`);
+        
+        // Mark URL loading as complete after WASM is ready
+        setIsLoadingFromUrl(false);
       } catch (error) {
         const errorMessage = `Failed to initialize WASM: ${error instanceof Error ? error.message : 'Unknown error'}`;
         setError(errorMessage);
         console.error('Failed to initialize WASM:', error);
         // Do not enable mock mode; keep WASM disabled on failure
         setWasmLoaded(false);
+        setIsLoadingFromUrl(false);
       }
     };
 
@@ -240,6 +247,11 @@ export default function Home() {
   const handleShareTemplate = async () => {
     if (!templateContent.trim()) {
       setError('Cannot share empty template');
+      return;
+    }
+
+    if (!selectedModel) {
+      setError('Model not yet loaded');
       return;
     }
 
@@ -329,7 +341,7 @@ export default function Home() {
             wasmLoaded={wasmLoaded}
             onShare={handleShareTemplate}
             shareStatus={shareStatus}
-            selectedModel={selectedModel}
+            selectedModel={selectedModel || 'official'}
             onModelChange={setSelectedModel}
             availableModels={WASM_MODELS}
           />
