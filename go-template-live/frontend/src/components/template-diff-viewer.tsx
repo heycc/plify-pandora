@@ -12,6 +12,9 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import type { WasmModel, WasmModelConfig } from '@/lib/wasm-utils';
 
+// Get the base path from the environment variable or default to empty string
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 interface TemplateDiffViewerProps {
   original: string;
   modified: string;
@@ -54,11 +57,13 @@ export function TemplateDiffViewer({
   const [isMonacoLoaded, setIsMonacoLoaded] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load Monaco Editor from CDN
+  // Load Monaco Editor from local files
   useEffect(() => {
     // Check if Monaco is already loaded
     if (window.require && window.require.defined && window.require.defined('vs/editor/editor.main')) {
-      window.require(['vs/editor/editor.main'], (monaco: any) => {
+      window.require(['vs/editor/editor.main'], (monacoModule: any) => {
+        // In newer versions, the monaco API is under monacoModule.m
+        const monaco = monacoModule.m || monacoModule;
         monacoRef.current = monaco;
         setIsMonacoLoaded(true);
       });
@@ -67,38 +72,24 @@ export function TemplateDiffViewer({
 
     // Load Monaco Editor loader
     const loaderScript = document.createElement('script');
-    loaderScript.src = 'https://unpkg.com/monaco-editor@0.45.0/min/vs/loader.js';
+    loaderScript.src = `${BASE_PATH}/monaco-editor/vs/loader.js`;
     loaderScript.async = true;
 
     loaderScript.onload = () => {
-      // Configure Monaco Environment
-      window.MonacoEnvironment = {
-        getWorkerUrl: function (_: any, label: string) {
-          if (label === 'json') {
-            return 'https://unpkg.com/monaco-editor@0.45.0/min/vs/language/json/json.worker.js';
-          }
-          if (label === 'css' || label === 'scss' || label === 'less') {
-            return 'https://unpkg.com/monaco-editor@0.45.0/min/vs/language/css/css.worker.js';
-          }
-          if (label === 'html' || label === 'handlebars' || label === 'razor') {
-            return 'https://unpkg.com/monaco-editor@0.45.0/min/vs/language/html/html.worker.js';
-          }
-          if (label === 'typescript' || label === 'javascript') {
-            return 'https://unpkg.com/monaco-editor@0.45.0/min/vs/language/typescript/ts.worker.js';
-          }
-          return 'https://unpkg.com/monaco-editor@0.45.0/min/vs/base/worker/workerMain.js';
-        }
-      };
-
-      // Configure loader
+      // Configure loader first
       window.require.config({
         paths: {
-          vs: 'https://unpkg.com/monaco-editor@0.45.0/min/vs'
+          vs: `${BASE_PATH}/monaco-editor/vs`
         }
       });
 
       // Load Monaco Editor
-      window.require(['vs/editor/editor.main'], (monaco: any) => {
+      window.require(['vs/editor/editor.main'], (monacoModule: any) => {
+        console.log('Monaco module loaded:', monacoModule);
+        // In newer versions, the monaco API is under monacoModule.m
+        const monaco = monacoModule.m || monacoModule;
+        console.log('Monaco object:', monaco);
+        console.log('Monaco.editor:', monaco?.editor);
         monacoRef.current = monaco;
         setIsMonacoLoaded(true);
       });

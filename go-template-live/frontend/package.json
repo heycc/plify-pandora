@@ -4,17 +4,21 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run copy-monaco && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "copy-monaco": "node scripts/copy-monaco-files.js",
+    "postinstall": "npm run copy-monaco"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.13",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.546.0",
+    "monaco-editor": "^0.54.0",
     "next": "16.0.0",
     "pako": "^2.1.0",
     "react": "19.2.0",
