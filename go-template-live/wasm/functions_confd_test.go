@@ -249,6 +249,59 @@ func TestEndToEnd_ConfdFunctions(t *testing.T) {
 			expectedOutput: "apple banana cherry ",
 		},
 
+		// Custom functions (getv, exists, get)
+		{
+			name:     "getv function with existing variable",
+			template: `{{getv "username"}}`,
+			expectedVars: []VariableInfo{
+				{Name: "username"},
+			},
+			providedValues: map[string]interface{}{
+				"username": "alice",
+			},
+			expectedOutput: "alice",
+		},
+		{
+			name:     "getv function with default value",
+			template: `{{getv "missing" "default_value"}}`,
+			expectedVars: []VariableInfo{
+				{Name: "missing", DefaultValue: "default_value"},
+			},
+			providedValues: map[string]interface{}{},
+			expectedOutput: "default_value",
+		},
+		{
+			name:     "exists function - true",
+			template: `{{if exists "username"}}User exists{{else}}No user{{end}}`,
+			expectedVars: []VariableInfo{
+				{Name: "username"},
+			},
+			providedValues: map[string]interface{}{
+				"username": "bob",
+			},
+			expectedOutput: "User exists",
+		},
+		{
+			name:     "exists function - false",
+			template: `{{if exists "missing"}}Found{{else}}Not found{{end}}`,
+			expectedVars: []VariableInfo{
+				{Name: "missing"},
+			},
+			providedValues: map[string]interface{}{},
+			expectedOutput: "Not found",
+		},
+		{
+			name:     "get function with existing variable",
+			template: `{{get "port"}}`,
+			expectedVars: []VariableInfo{
+				{Name: "port"},
+			},
+			providedValues: map[string]interface{}{
+				"port": 8080,
+			},
+			expectedOutput: "8080",
+		},
+
 		// Combined functions
 		{
 			name:           "combined string functions",
@@ -389,6 +442,32 @@ func TestConfdFunctions_VariableExtraction(t *testing.T) {
 			name:         "mixed json and utility with literals",
 			template:     `{{json "data"}} {{base "path"}}`,
 			expectedVars: []VariableInfo{{Name: "data"}}, // base with literal doesn't extract
+		},
+		// Custom functions variable extraction
+		{
+			name:         "getv function extracts variable",
+			template:     `{{getv "username"}}`,
+			expectedVars: []VariableInfo{{Name: "username"}},
+		},
+		{
+			name:         "getv function with default value",
+			template:     `{{getv "username" "default"}}`,
+			expectedVars: []VariableInfo{{Name: "username", DefaultValue: "default"}},
+		},
+		{
+			name:         "exists function extracts variable",
+			template:     `{{exists "config"}}`,
+			expectedVars: []VariableInfo{{Name: "config"}},
+		},
+		{
+			name:         "get function extracts variable",
+			template:     `{{get "port"}}`,
+			expectedVars: []VariableInfo{{Name: "port"}},
+		},
+		{
+			name:         "mixed custom and confd functions",
+			template:     `{{getv "name"}} {{base .path}} {{exists "enabled"}}`,
+			expectedVars: []VariableInfo{{Name: "name"}, {Name: "path"}, {Name: "enabled"}},
 		},
 	}
 

@@ -9,6 +9,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"path"
 	"strconv"
 	"strings"
@@ -21,6 +22,34 @@ import (
 // This is called by both WASM (via init in functions_confd.go) and tests
 func registerConfdFunctions() {
 	registry := GetGlobalRegistry()
+
+	// Custom functions (getv, exists, get)
+	// getv - Get variable value with optional default
+	registry.RegisterFunction(&FunctionDefinition{
+		Name:                  "getv",
+		Description:           "Get variable value with optional default (Confd-style)",
+		Handler:               getvMinimalHandler,
+		Extractor:             extractGetvVariables,
+		ExtractorWithDefaults: extractGetvVariablesWithDefaults,
+	})
+
+	// exists - Check if variable exists (no default value support)
+	registry.RegisterFunction(&FunctionDefinition{
+		Name:                  "exists",
+		Description:           "Check if variable exists (Confd-style)",
+		Handler:               existsMinimalHandler,
+		Extractor:             extractKeyArgVariable,
+		ExtractorWithDefaults: extractKeyArgVariableInfo,
+	})
+
+	// get - Get variable value (errors if not found, no default value support)
+	registry.RegisterFunction(&FunctionDefinition{
+		Name:                  "get",
+		Description:           "Get variable value, returns error if not found (Confd-style)",
+		Handler:               getMinimalHandler,
+		Extractor:             extractKeyArgVariable,
+		ExtractorWithDefaults: extractKeyArgVariableInfo,
+	})
 
 	// base - Base function (path.Base) - extracts variables from first argument
 	registry.RegisterFunction(&FunctionDefinition{
@@ -298,6 +327,29 @@ func extractFirstArgVariableInfo(args []parse.Node, cycle int) ([]VariableInfo, 
 // This is used by both the WASM build (via CreateRenderFuncMap) and tests
 func GetConfdRenderFuncMap(variables map[string]interface{}) template.FuncMap {
 	return template.FuncMap{
+		// Custom functions (getv, exists, get)
+		"getv": func(key string, v ...string) string {
+			if val, exists := variables[key]; exists {
+				if strVal, ok := val.(string); ok && strVal != "" {
+					return strVal
+				}
+			}
+			if len(v) > 0 {
+				return v[0] // return default value
+			}
+			return ""
+		},
+		"exists": func(key string) bool {
+			_, exists := variables[key]
+			return exists
+		},
+		"get": func(key string) (interface{}, error) {
+			if val, exists := variables[key]; exists {
+				return val, nil
+			}
+			return nil, fmt.Errorf("key %s not found", key)
+		},
+		// Confd functions
 		"base":         func(s string) string { return path.Base(s) },
 		"split":        func(s, sep string) []string { return strings.Split(s, sep) },
 		"dir":          func(s string) string { return path.Dir(s) },
@@ -377,4 +429,38 @@ func GetConfdRenderFuncMap(variables map[string]interface{}) template.FuncMap {
 			return nil, nil
 		},
 	}
+}
+
+// Minimal handlers for custom functions
+func getvMinimalHandler(key string, v ...string) string {
+	return ""
+}
+
+func existsMinimalHandler(key string) bool {
+	return false
+}
+
+func getMinimalHandler(key string) (interface{}, error) {
+	return nil, nil
+}
+
+// Variable extractors for custom functions
+// extractKeyArgVariable extracts a single key argument (used by custom functions)
+func extractKeyArgVariable(args []parse.Node, cycle int) ([]string, error) {
+	return extractStringArgVariable(args, cycle, 1)
+}
+
+// extractKeyArgVariableInfo extracts key as VariableInfo without defaults
+func extractKeyArgVariableInfo(args []parse.Node, cycle int) ([]VariableInfo, error) {
+	return extractStringArgVariableWithDefaults(args, cycle, 1, -1)
+}
+
+// getv is special - it supports default values
+func extractGetvVariables(args []parse.Node, cycle int) ([]string, error) {
+	return extractStringArgVariable(args, cycle, 1)
+}
+
+func extractGetvVariablesWithDefaults(args []parse.Node, cycle int) ([]VariableInfo, error) {
+	// getv supports default value as second argument (index 2)
+	return extractStringArgVariableWithDefaults(args, cycle, 1, 2)
 }

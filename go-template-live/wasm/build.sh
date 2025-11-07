@@ -11,6 +11,19 @@
 # - functions_custom.go: included when building with "custom" tag
 # - functions_confd.go: included when building with "confd" tag
 # - functions_official.go: included when building with "official" tag
+#
+# Build-time Optimization Techniques:
+# - ldflags="-s -w": Strip debug info and symbol table (~30-40% size reduction)
+#   -s: Omit the symbol table and debug information
+#   -w: Omit the DWARF symbol table
+# - trimpath: Remove file system paths from binary (improves reproducibility)
+#
+# Additional optimization options (not enabled):
+# - TinyGo: Use TinyGo compiler for even smaller binaries (50-90% smaller)
+#   Example: tinygo build -o main.wasm -target wasm .
+#
+# Note: For production deployment, your web server (nginx, Vercel, Netlify, etc.)
+# should automatically compress WASM files with gzip/brotli for transfer (~70-80% reduction)
 
 set -e  # Exit on error
 
@@ -19,7 +32,7 @@ echo ""
 
 # Build WASM with official Go template functions only
 echo "Building official.wasm (official Go template functions only)..."
-GOOS=js GOARCH=wasm go build -tags official -o official.wasm .
+GOOS=js GOARCH=wasm go build -tags official -ldflags="-s -w" -trimpath -o official.wasm .
 
 if [ $? -eq 0 ]; then
     echo "✓ official.wasm built successfully"
@@ -32,7 +45,7 @@ echo ""
 
 # Build WASM with custom functions
 echo "Building custom.wasm (with custom functions)..."
-GOOS=js GOARCH=wasm go build -tags custom -o custom.wasm .
+GOOS=js GOARCH=wasm go build -tags custom -ldflags="-s -w" -trimpath -o custom.wasm .
 
 if [ $? -eq 0 ]; then
     echo "✓ custom.wasm built successfully"
@@ -45,7 +58,7 @@ echo ""
 
 # Build WASM with Confd-style functions
 echo "Building confd.wasm (with Confd-style functions)..."
-GOOS=js GOARCH=wasm go build -tags confd -o confd.wasm .
+GOOS=js GOARCH=wasm go build -tags confd -ldflags="-s -w" -trimpath -o confd.wasm .
 
 if [ $? -eq 0 ]; then
     echo "✓ confd.wasm built successfully"
