@@ -44,3 +44,4 @@ next-env.d.ts
 
 # monaco editor (generated from node_modules)
 /public/monaco-editor
+/public/monaco-workers
