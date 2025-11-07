@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { TemplateDiffViewer } from '@/components/template-diff-viewer';
 import { VariablePanel } from '@/components/variable-panel';
 import { examples } from '@/lib/template-examples';
-import { wasmUtils } from '@/lib/wasm-utils';
+import { wasmUtils, type WasmModel, WASM_MODELS } from '@/lib/wasm-utils';
 import { getTemplateDataFromUrl, copyShareableUrl, hasSharedTemplateInUrl, generateShareableUrl } from '@/lib/url-sharing';
 
 interface VariableInfo {
@@ -15,6 +15,7 @@ interface VariableInfo {
 
 export default function Home() {
   const [wasmLoaded, setWasmLoaded] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<WasmModel>('official');
 
   // Template states
   const [templateContent, setTemplateContent] = useState(examples.Basic);
@@ -69,10 +70,10 @@ export default function Home() {
     }
   }, [wasmLoaded]);
 
-  // Extract variables when template changes (but not during URL loading)
+  // Extract variables when template changes or model changes (but not during URL loading)
   useEffect(() => {
-    // Skip if we're still loading from URL
-    if (isLoadingFromUrl) {
+    // Skip if we're still loading from URL or WASM is not loaded
+    if (isLoadingFromUrl || !wasmLoaded) {
       return;
     }
 
@@ -112,17 +113,22 @@ export default function Home() {
     };
 
     extractVars();
-  }, [templateContent, extractVariables, isLoadingFromUrl]);
+  }, [templateContent, extractVariables, isLoadingFromUrl, wasmLoaded, selectedModel]);
 
-  // Re-render when template or variables change
+  // Re-render when template, variables, or model changes
   useEffect(() => {
+    // Skip if WASM is not loaded
+    if (!wasmLoaded) {
+      return;
+    }
+
     const render = async () => {
       const rendered = await renderTemplate(templateContent, variableValues);
       setRenderedContent(rendered);
     };
 
     render();
-  }, [templateContent, variableValues, renderTemplate]);
+  }, [templateContent, variableValues, renderTemplate, wasmLoaded, selectedModel]);
 
   // Load template and variables from URL if present (runs once on mount)
   useEffect(() => {
@@ -130,6 +136,11 @@ export default function Home() {
       if (hasSharedTemplateInUrl()) {
         const sharedData = getTemplateDataFromUrl();
         if (sharedData) {
+          // Set model first if present
+          if (sharedData.model) {
+            setSelectedModel(sharedData.model);
+          }
+          
           // Set template first
           setTemplateContent(sharedData.template);
           
@@ -166,7 +177,7 @@ export default function Home() {
         }
 
         try {
-          const shareableUrl = generateShareableUrl(templateContent, variableValues);
+          const shareableUrl = generateShareableUrl(templateContent, variableValues, selectedModel);
           if (shareableUrl) {
             // Update URL without reloading the page
             const url = new URL(shareableUrl);
@@ -185,13 +196,14 @@ export default function Home() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [templateContent, variableValues]);
+  }, [templateContent, variableValues, selectedModel]);
 
-  // Initialize WASM
+  // Initialize WASM (re-initialize when model changes)
   useEffect(() => {
     const initializeWASM = async () => {
       try {
-        await wasmUtils.initialize();
+        setWasmLoaded(false);
+        await wasmUtils.initialize(selectedModel);
         setWasmLoaded(true);
         setError(null); // Clear error on success
       } catch (error) {
@@ -204,7 +216,7 @@ export default function Home() {
     };
 
     initializeWASM();
-  }, []);
+  }, [selectedModel]);
 
   const handleVariableValuesChange = useCallback((values: Record<string, string>) => {
     setVariableValues(values);
@@ -233,12 +245,12 @@ export default function Home() {
 
     setShareStatus('copying');
     try {
-      const success = await copyShareableUrl(templateContent, variableValues);
+      const success = await copyShareableUrl(templateContent, variableValues, selectedModel);
       if (success) {
         setShareStatus('success');
 
         // Update current page URL to match the shared template
-        const shareableUrl = generateShareableUrl(templateContent, variableValues);
+        const shareableUrl = generateShareableUrl(templateContent, variableValues, selectedModel);
         if (shareableUrl) {
           // Update URL without reloading the page
           const url = new URL(shareableUrl);
@@ -317,6 +329,9 @@ export default function Home() {
             wasmLoaded={wasmLoaded}
             onShare={handleShareTemplate}
             shareStatus={shareStatus}
+            selectedModel={selectedModel}
+            onModelChange={setSelectedModel}
+            availableModels={WASM_MODELS}
           />
         </div>
 

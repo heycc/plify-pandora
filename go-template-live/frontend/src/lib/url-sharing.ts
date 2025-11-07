@@ -2,6 +2,7 @@
 // Shares both template text and variable values
 
 import pako from 'pako';
+import type { WasmModel } from './wasm-utils';
 
 // Safe URL length limits for cross-browser compatibility
 // Conservative limit to ensure compatibility with all browsers including mobile
@@ -10,17 +11,21 @@ const SAFE_URL_LENGTH_LIMIT = 2000;
 interface ShareData {
   template: string;
   variables?: Record<string, string>;
+  model?: WasmModel;
 }
 
 /**
- * Compress and encode template data (including variables) for URL sharing
+ * Compress and encode template data (including variables and model) for URL sharing
  */
-export function encodeTemplateData(templateText: string, variables?: Record<string, string>): string {
+export function encodeTemplateData(templateText: string, variables?: Record<string, string>, model?: WasmModel): string {
   try {
     // Create data object to encode
     const data: ShareData = { template: templateText };
     if (variables && Object.keys(variables).length > 0) {
       data.variables = variables;
+    }
+    if (model) {
+      data.model = model;
     }
 
     // Convert to JSON string
@@ -48,12 +53,12 @@ export function encodeTemplateData(templateText: string, variables?: Record<stri
  * Compress and encode template text for URL sharing
  */
 export function encodeTemplateText(templateText: string): string {
-  return encodeTemplateData(templateText);
+  return encodeTemplateData(templateText, undefined, undefined);
 }
 
 /**
  * Decode and decompress template data from URL parameter
- * Returns both template and variables if present
+ * Returns template, variables, and model if present (defaults to 'official' if not specified)
  */
 export function decodeTemplateData(encodedData: string): ShareData | null {
   try {
@@ -83,10 +88,14 @@ export function decodeTemplateData(encodedData: string): ShareData | null {
     // Try to parse as JSON (new format)
     try {
       const data = JSON.parse(jsonString) as ShareData;
+      // Default to 'official' model if not specified
+      if (!data.model) {
+        data.model = 'official';
+      }
       return data;
     } catch {
       // Fallback for old format (plain template text)
-      return { template: jsonString };
+      return { template: jsonString, model: 'official' };
     }
   } catch (error) {
     console.error('Failed to decode template data:', error);
@@ -104,15 +113,16 @@ export function decodeTemplateText(encodedData: string): string | null {
 }
 
 /**
- * Generate shareable URL with encoded template text and variables
+ * Generate shareable URL with encoded template text, variables, and model
  * Returns null if the URL would exceed safe length limits
  */
 export function generateShareableUrl(
   templateText: string,
-  variables?: Record<string, string>
+  variables?: Record<string, string>,
+  model?: WasmModel
 ): string | null {
   try {
-    const encodedData = encodeTemplateData(templateText, variables);
+    const encodedData = encodeTemplateData(templateText, variables, model);
     const currentUrl = window.location.origin + window.location.pathname;
     const shareableUrl = `${currentUrl}?template=${encodedData}`;
 
@@ -156,10 +166,11 @@ export function getTemplateTextFromUrl(): string | null {
  */
 export async function copyShareableUrl(
   templateText: string,
-  variables?: Record<string, string>
+  variables?: Record<string, string>,
+  model?: WasmModel
 ): Promise<boolean> {
   try {
-    const url = generateShareableUrl(templateText, variables);
+    const url = generateShareableUrl(templateText, variables, model);
 
     // Check if URL generation failed due to length limits
     if (!url) {
@@ -173,7 +184,7 @@ export async function copyShareableUrl(
 
     // Fallback for older browsers
     try {
-      const url = generateShareableUrl(templateText, variables);
+      const url = generateShareableUrl(templateText, variables, model);
 
       if (!url) {
         return false;
@@ -207,10 +218,11 @@ export function hasSharedTemplateInUrl(): boolean {
  */
 export function isTemplateTooLarge(
   templateText: string,
-  variables?: Record<string, string>
+  variables?: Record<string, string>,
+  model?: WasmModel
 ): boolean {
   // Only check the final encoded URL length
-  const url = generateShareableUrl(templateText, variables);
+  const url = generateShareableUrl(templateText, variables, model);
   return url === null;
 }
 
@@ -219,14 +231,15 @@ export function isTemplateTooLarge(
  */
 export function getTemplateSizeInfo(
   templateText: string,
-  variables?: Record<string, string>
+  variables?: Record<string, string>,
+  model?: WasmModel
 ): {
   originalSize: number;
   estimatedUrlSize: number;
   isTooLarge: boolean;
 } {
   const originalSize = templateText.length;
-  const url = generateShareableUrl(templateText, variables);
+  const url = generateShareableUrl(templateText, variables, model);
   const estimatedUrlSize = url ? url.length : SAFE_URL_LENGTH_LIMIT + 1;
   const isTooLarge = estimatedUrlSize > SAFE_URL_LENGTH_LIMIT;
 

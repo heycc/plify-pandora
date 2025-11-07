@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useEffect, useRef, useState } from 'react';
+import type { WasmModel, WasmModelConfig } from '@/lib/wasm-utils';
 
 interface TemplateDiffViewerProps {
   original: string;
@@ -13,6 +14,9 @@ interface TemplateDiffViewerProps {
   wasmLoaded?: boolean;
   onShare?: () => void;
   shareStatus?: 'idle' | 'copying' | 'success' | 'error';
+  selectedModel?: WasmModel;
+  onModelChange?: (model: WasmModel) => void;
+  availableModels?: Record<WasmModel, WasmModelConfig>;
 }
 
 declare global {
@@ -30,7 +34,10 @@ export function TemplateDiffViewer({
   error = null,
   wasmLoaded = false,
   onShare,
-  shareStatus = 'idle'
+  shareStatus = 'idle',
+  selectedModel = 'official',
+  onModelChange,
+  availableModels
 }: TemplateDiffViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const diffEditorRef = useRef<any>(null);
@@ -186,9 +193,38 @@ export function TemplateDiffViewer({
     <Card className="h-full flex flex-col gap-2 py-4 bg-gray-100 backdrop-blur-sm">
       <CardHeader className="">
         <CardTitle className="text-lg flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="text-2xl">📝</span>
-            Template Diff Viewer
+            {/* Model Selector */}
+            {availableModels && onModelChange && (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => onModelChange(e.target.value as WasmModel)}
+                    className="px-3 py-1.5 text-sm font-medium bg-white border-2 border-gray-300 rounded-lg shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!wasmLoaded}
+                  >
+                    {Object.entries(availableModels).map(([key, config]) => (
+                      <option key={key} value={key}>
+                        {config.name} - {config.description}
+                      </option>
+                    ))}
+                  </select>
+                  {!wasmLoaded && (
+                    <span className="text-xs text-blue-600 animate-pulse">Loading...</span>
+                  )}
+                  {wasmLoaded && selectedModel && (
+                    <span className="text-xs text-green-600 font-semibold">✓ Active</span>
+                  )}
+                </div>
+                {selectedModel && availableModels[selectedModel] && (
+                  <div className="text-xs text-gray-600 ml-1">
+                    Functions: {availableModels[selectedModel].functions}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 ml-auto">
             {/* Error Display */}
