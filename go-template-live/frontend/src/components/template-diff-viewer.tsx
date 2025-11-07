@@ -2,6 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useEffect, useRef, useState } from 'react';
 import type { WasmModel, WasmModelConfig } from '@/lib/wasm-utils';
 
@@ -45,6 +52,7 @@ export function TemplateDiffViewer({
   const originalModelRef = useRef<any>(null);
   const modifiedModelRef = useRef<any>(null);
   const [isMonacoLoaded, setIsMonacoLoaded] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load Monaco Editor from CDN
   useEffect(() => {
@@ -134,6 +142,9 @@ export function TemplateDiffViewer({
       renderIndicators: true,
       diffAlgorithm: 'advanced',
       renderSideBySideInlineBreakpoint: 0, // Disable automatic inline mode switching
+      autoClosingBrackets: 'never', // Disable auto-closing brackets for Go templates
+      autoClosingQuotes: 'never', // Also disable auto-closing quotes
+      // autoSurround: 'never', // Disable auto-surrounding selection
     });
 
     // Set models
@@ -144,19 +155,34 @@ export function TemplateDiffViewer({
 
     diffEditorRef.current = diffEditor;
 
-    // Listen for changes in the original editor (left side)
+    // Listen for changes in the original editor (left side) with debouncing
     if (onOriginalChange && !readOnly) {
       const originalEditor = diffEditor.getOriginalEditor();
       originalEditor.onDidChangeModelContent(() => {
         const newValue = originalEditor.getValue();
-        if (onOriginalChange) {
-          onOriginalChange(newValue);
+        
+        // Clear existing timer
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
         }
+        
+        // Set new timer to trigger after 500ms of inactivity
+        debounceTimerRef.current = setTimeout(() => {
+          if (onOriginalChange) {
+            onOriginalChange(newValue);
+          }
+        }, 500);
       });
     }
 
     // Cleanup
     return () => {
+      // Clear debounce timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      
       if (diffEditorRef.current) {
         diffEditorRef.current.dispose();
         diffEditorRef.current = null;
@@ -199,30 +225,37 @@ export function TemplateDiffViewer({
             {availableModels && onModelChange && (
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <select
+                  <span className="text-sm text-gray-600">Template</span>
+                  <Select
                     value={selectedModel}
-                    onChange={(e) => onModelChange(e.target.value as WasmModel)}
-                    className="px-3 py-1.5 text-sm font-medium bg-white border-2 border-gray-300 rounded-lg shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    onValueChange={(value: string) => onModelChange(value as WasmModel)}
                     disabled={!wasmLoaded}
                   >
-                    {Object.entries(availableModels).map(([key, config]) => (
-                      <option key={key} value={key}>
-                        {config.name} - {config.description}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="max-w-40 h-8 px-2 py-0 text-sm font-medium bg-white border-2 border-gray-300 rounded-md hover:border-blue-400 focus:border-blue-500 focus:ring-0 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      <SelectValue placeholder="Select a model">
+                        {selectedModel && availableModels[selectedModel] && (
+                          <span>
+                            {availableModels[selectedModel].name}
+                          </span>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="max-w-100">
+                      {Object.entries(availableModels).map(([key, config]) => (
+                        <SelectItem key={key} value={key}>
+                          <span className="font-medium">{config.name}</span>
+                          <div className="text-xs text-gray-600">
+                            {config.description}: {config.functions}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {!wasmLoaded && (
                     <span className="text-xs text-blue-600 animate-pulse">Loading...</span>
                   )}
-                  {wasmLoaded && selectedModel && (
-                    <span className="text-xs text-green-600 font-semibold">✓ Active</span>
-                  )}
                 </div>
-                {selectedModel && availableModels[selectedModel] && (
-                  <div className="text-xs text-gray-600 ml-1">
-                    Functions: {availableModels[selectedModel].functions}
-                  </div>
-                )}
+                
               </div>
             )}
           </div>

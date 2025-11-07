@@ -14,7 +14,7 @@ export const WASM_MODELS: Record<WasmModel, WasmModelConfig> = {
     name: 'Official',
     fileName: 'official.wasm',
     description: 'Official Go template functions only',
-    functions: 'Standard Go template functions (no custom functions)'
+    functions: '(no custom functions)'
   },
   custom: {
     name: 'Custom',
