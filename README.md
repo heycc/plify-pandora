@@ -1,6 +1,6 @@
-# Plify Trove 🧰
+# Plify Pandora 🧰
 
-> A collection of interesting and useful tools built by **Vibe Coding**
+> A collection of interesting and useful tools built by via Vibe Coding
 
 ## 📦 Tools Collection
 
@@ -16,43 +16,26 @@ An interactive web-based playground for Go templates that instantly shows what v
 
 ### ✨ Key Features
 
-- **🔍 Auto-Extract Variables** - Stop guessing what data your template needs. Instantly see all variables referenced in your template.
+- **🔍 Auto-Extract Variables** - Instantly see all variables referenced in your template, or show you where the syntax fail.
+- **🎁 Smart Default Detection** - Automatically extracts default values from custom functions like `{{getv "key" "default"}}
 - **📊 Live Diff View** - See exactly what changes as you type, with side-by-side comparison using Monaco Editor.
-- **⚡ Real-Time Rendering** - Preview your template output instantly with WebAssembly-powered processing.
-- **🎁 Smart Default Detection** - Automatically extracts default values from custom functions like `{{getv "key" "default"}}`.
-- **🔗 URL Sharing** - Share templates via URL for quick team review and collaboration.
-- **🛠️ Confd-Style Functions** - Built-in support for `getv`, `exists`, `get`, `json`, `jsonArray` functions.
-
-### 🎯 Perfect For
-
-| Use Case | Description |
-|----------|-------------|
-| 📦 **Helm Chart Templates** | Test `values.yaml` rendering before deployment |
-| ⚙️ **Confd Configurations** | Preview config file output with different variables |
-| 📧 **Email Templates** | See variables and formatting in real-time |
-| 🔧 **Custom Config Systems** | Validate template syntax before deployment |
-| 📚 **Learning Go Templates** | Experiment and learn by seeing immediate results |
+- **⚡ All Real-Time** - Extracting and rendering your template instantly with WebAssembly-powered processing.
+- **🔗 URL Sharing** - Share your template content via URL for quick team review and collaboration.
+- **🛠️ Confd-Style Functions** - Built-in support for `getv`, `exists`, `get`, `json`, `jsonArray` .etc that up to 20+ custom funcitons.
 
 ### 🚀 Why Use This?
 
 #### Traditional Workflow:
-❌ Write template
-❌ Deploy to test environment
-❌ Find error: "variable 'UserName' not found"
-❌ Fix and redeploy
-❌ Another error: "expected string, got bool"
-❌ Fix and redeploy again...
+- ❌ Write template
+- ❌ Deploy to test environment
+- ❌ Find error: "variable 'UserName' not found"
+- ❌ Fix and redeploy
+- ❌ Another error: "expected string, got bool"
+- ❌ Fix and redeploy again...
 
 
 #### With Go Template Live:
-✅ Paste template → See variables needed
-✅ Fill in test values → Preview output
-✅ See diff in real-time → Iterate quickly
-✅ Copy working template → Deploy with confidence
-
-
-✨ Live Preview: Updates as you type
-🔄 Diff View: Seeitecture for adding new template functions
-- **Monaco Diff Editor** - Professional code editing experience
-- **Next.js + React** - Modern, responsive frontend
-- **Zero Server Dependency** - All processing happens client-side
+- ✅ Paste template → See variables needed
+- ✅ Fill in test values → Preview output
+- ✅ See diff in real-time → Iterate quickly
+- ✅ Copy working template → Deploy with confidence

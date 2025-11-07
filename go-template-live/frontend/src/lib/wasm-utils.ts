@@ -26,7 +26,7 @@ export const WASM_MODELS: Record<WasmModel, WasmModelConfig> = {
     name: 'Confd',
     fileName: 'confd.wasm',
     description: 'Official + Confd-style functions',
-    functions: 'base, split, json, jsonArray, dir, map, join, datetime, toUpper, toLower, replace, contains, base64Encode, base64Decode, trimSuffix, parseBool, reverse, add, sub, div, mod, mul, seq, atoi'
+    functions: 'base, split, getv, exists, get, json, jsonArray, dir, map, join, datetime, toUpper, toLower, replace, contains, base64Encode, base64Decode, trimSuffix, parseBool, reverse, add, sub, div, mod, mul, seq, atoi'
   }
 };
 
