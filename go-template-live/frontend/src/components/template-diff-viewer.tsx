@@ -71,7 +71,24 @@ export function TemplateDiffViewer({
     }
 
     // Load Monaco Editor loader
+    const existingLoader = document.getElementById('monaco-loader-script') as HTMLScriptElement | null;
+    if (existingLoader) {
+      const tryInit = () => {
+        if (window.require && window.require.defined && window.require.defined('vs/editor/editor.main')) {
+          window.require(['vs/editor/editor.main'], (monacoModule: any) => {
+            const monaco = monacoModule.m || monacoModule;
+            monacoRef.current = monaco;
+            setIsMonacoLoaded(true);
+          });
+        }
+      };
+      tryInit();
+      existingLoader.addEventListener('load', tryInit, { once: true });
+      return;
+    }
+
     const loaderScript = document.createElement('script');
+    loaderScript.id = 'monaco-loader-script';
     loaderScript.src = `${BASE_PATH}/monaco-editor/vs/loader.js`;
     loaderScript.async = true;
 
@@ -146,25 +163,11 @@ export function TemplateDiffViewer({
 
     diffEditorRef.current = diffEditor;
 
-    // Listen for changes in the original editor (left side) with debouncing
-    if (onOriginalChange && !readOnly) {
-      const originalEditor = diffEditor.getOriginalEditor();
-      originalEditor.onDidChangeModelContent(() => {
-        const newValue = originalEditor.getValue();
-        
-        // Clear existing timer
-        if (debounceTimerRef.current) {
-          clearTimeout(debounceTimerRef.current);
-        }
-        
-        // Set new timer to trigger after 500ms of inactivity
-        debounceTimerRef.current = setTimeout(() => {
-          if (onOriginalChange) {
-            onOriginalChange(newValue);
-          }
-        }, 500);
-      });
-    }
+    // Ensure cursor moves by single columns/lines
+    const originalEditor = diffEditor.getOriginalEditor();
+    const modifiedEditor = diffEditor.getModifiedEditor();
+    originalEditor.updateOptions({ useTabStops: false });
+    modifiedEditor.updateOptions({ useTabStops: false });
 
     // Cleanup
     return () => {
@@ -187,7 +190,50 @@ export function TemplateDiffViewer({
         modifiedModelRef.current = null;
       }
     };
-  }, [isMonacoLoaded, readOnly, onOriginalChange]);
+  }, [isMonacoLoaded]);
+
+  // Keep original editor editable state in sync without recreating editor
+  useEffect(() => {
+    if (!diffEditorRef.current) return;
+    diffEditorRef.current.updateOptions({ originalEditable: !readOnly });
+  }, [readOnly]);
+
+  // Wire change listener for original editor with debouncing; keep tidy across changes
+  useEffect(() => {
+    if (!diffEditorRef.current) return;
+
+    // Clear any pending debounce work on re-wire
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    let disposeListener: { dispose: () => void } | null = null;
+    if (onOriginalChange && !readOnly) {
+      const originalEditor = diffEditorRef.current.getOriginalEditor();
+      disposeListener = originalEditor.onDidChangeModelContent(() => {
+        const newValue = originalEditor.getValue();
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        debounceTimerRef.current = setTimeout(() => {
+          if (onOriginalChange) {
+            onOriginalChange(newValue);
+          }
+        }, 500);
+      });
+    }
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      if (disposeListener) {
+        disposeListener.dispose();
+      }
+    };
+  }, [onOriginalChange, readOnly]);
 
   // Update content when props change
   useEffect(() => {
