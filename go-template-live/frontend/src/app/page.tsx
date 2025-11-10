@@ -51,7 +51,7 @@ export default function Home() {
     } catch (error) {
       const errorMessage = `Failed to extract variables: ${error instanceof Error ? error.message : 'Unknown error'}`;
       setError(errorMessage);
-      console.error('Failed to extract variables with WASM:', error);
+      console.warn('Failed to extract variables with WASM:', error);
       return [];
     }
   }, [wasmLoaded]);
@@ -65,7 +65,7 @@ export default function Home() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setError(errorMessage);
-      console.error('Failed to render template with WASM:', error);
+      console.warn('Failed to render template with WASM:', error);
       return '';
     }
   }, [wasmLoaded]);

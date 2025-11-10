@@ -195,7 +195,7 @@ class WASMUtils {
 
       return [];
     } catch (error) {
-      console.warn('Failed to extract variables:', error);
+      // console.warn('Failed to extract variables:', error);
       throw error;
     }
   }
@@ -260,7 +260,7 @@ class WASMUtils {
 
       return '';
     } catch (error) {
-      console.warn('Failed to render template:', error);
+      // console.warn('Failed to render template:', error);
       // Provide more helpful error message for boolean values
       if (error instanceof Error && (error.message.includes('expected string; found true') || error.message.includes('expected string; found false'))) {
         throw new Error('Template contains boolean values (true/false) which are not supported. Use string values instead.');
